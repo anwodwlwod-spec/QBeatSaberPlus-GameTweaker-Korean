@@ -43,37 +43,32 @@ jobs:
           publish: false
           qpm_qmod: ${{ env.qmodName }}.qmod
 
-      - name: Print TextFactory UISystem and CText
+      - name: Print runtime font APIs
         shell: bash
         run: |
-          ROOT="extern/includes/chatplex-sdk-bs/shared/CP_SDK"
+          echo "===================================================="
+          echo "SEARCH TARGET FILES"
+          echo "===================================================="
 
-          echo "===================================================="
-          echo "MATCHING FILE PATHS"
-          echo "===================================================="
-          find "$ROOT" -type f \(             -iname '*TextFactory*' -o             -iname '*UISystem*' -o             -iname '*CText*'           \) -print | sort || true
-
-          echo ""
-          echo "===================================================="
-          echo "TEXTFACTORY MATCHES"
-          echo "===================================================="
-          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'TextFactory|Create\(.*CText|Create\(.*Text'             "$ROOT" | head -800 || true
+          find extern -type f \(             -path '*/UnityEngine/Font.hpp' -o             -path '*/TMPro/TMP_FontAsset.hpp'           \) -print | sort || true
 
           echo ""
           echo "===================================================="
-          echo "UISYSTEM MATCHES"
+          echo "UNITYENGINE FONT API MATCHES"
           echo "===================================================="
-          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'class UISystem|struct UISystem|UISystem::|TextFactory'             "$ROOT" | head -800 || true
+
+          grep -RIn             --include='Font.hpp'             -E 'CreateDynamicFontFromOSFont|GetOSInstalledFontNames|CreateFont|Font::'             extern | head -500 || true
 
           echo ""
           echo "===================================================="
-          echo "CTEXT MATCHES"
+          echo "TMP FONT ASSET API MATCHES"
           echo "===================================================="
-          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'class CText|struct CText|CText::|TMP_Text|TextMeshProUGUI|set_font|get_font|SetFont|fontAsset|FontAsset'             "$ROOT" | head -1200 || true
+
+          grep -RIn             --include='TMP_FontAsset.hpp'             -E 'CreateFontAsset|TryAddCharacters|HasCharacter|AtlasPopulationMode|sourceFontFile|fallbackFontAssetTable'             extern | head -800 || true
 
           echo ""
           echo "===================================================="
-          echo "PRINT MATCHING FILE CONTENTS"
+          echo "PRINT UnityEngine Font.hpp"
           echo "===================================================="
 
           while IFS= read -r file; do
@@ -81,10 +76,21 @@ jobs:
             echo "####################################################"
             echo "FILE: $file"
             echo "####################################################"
-            sed -n '1,400p' "$file"
-          done < <(
-            find "$ROOT" -type f \(               -iname '*TextFactory*' -o               -iname '*UISystem*' -o               -iname '*CText*'             \) | sort
-          )
+            sed -n '1,350p' "$file"
+          done < <(find extern -type f -path '*/UnityEngine/Font.hpp' | sort)
+
+          echo ""
+          echo "===================================================="
+          echo "PRINT TMPro TMP_FontAsset.hpp"
+          echo "===================================================="
+
+          while IFS= read -r file; do
+            echo ""
+            echo "####################################################"
+            echo "FILE: $file"
+            echo "####################################################"
+            sed -n '1,500p' "$file"
+          done < <(find extern -type f -path '*/TMPro/TMP_FontAsset.hpp' | sort)
 
       - name: Build and create QMOD
         run: |
