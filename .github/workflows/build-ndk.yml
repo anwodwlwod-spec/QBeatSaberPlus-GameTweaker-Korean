@@ -29,30 +29,30 @@ jobs:
 
       - name: Create ndkpath.txt
         run: |
-          echo "$ANDROID_NDK_HOME" > "${GITHUB_WORKSPACE}/ndkpath.txt"
-          cat "${GITHUB_WORKSPACE}/ndkpath.txt"
+          echo "$ANDROID_NDK_HOME" > "$GITHUB_WORKSPACE/ndkpath.txt"
+          cat "$GITHUB_WORKSPACE/ndkpath.txt"
 
       - name: Setup qpm
-  uses: Fernthedev/qpm-action@v1
-  with:
-    workflow_token: ${{ secrets.GITHUB_TOKEN }}
-    qpm_version: version@^1.0.0
-    restore: true
-    cache: true
-    resolve_ndk: true
-    publish: false
-    qpm_qmod: ${{ env.qmodName }}.qmod
+        uses: Fernthedev/qpm-action@v1
+        with:
+          workflow_token: ${{ secrets.GITHUB_TOKEN }}
+          qpm_version: version@^1.0.0
+          restore: true
+          cache: true
+          resolve_ndk: true
+          publish: false
+          qpm_qmod: ${{ env.qmodName }}.qmod
 
       - name: Build and create QMOD
         run: |
-          cd "${GITHUB_WORKSPACE}"
+          cd "$GITHUB_WORKSPACE"
           qpm s qmod
 
       - name: Get library name
         id: libname
         shell: bash
         run: |
-          cd build
+          cd "$GITHUB_WORKSPACE/build"
           shopt -s nullglob
           files=(lib${module_id}*.so)
           if [ ${#files[@]} -eq 0 ]; then
