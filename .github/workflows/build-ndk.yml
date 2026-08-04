@@ -43,37 +43,35 @@ jobs:
           publish: false
           qpm_qmod: ${{ env.qmodName }}.qmod
 
-      - name: Show extern contents
+      - name: Print XUIText and text component headers
         shell: bash
         run: |
           echo "===================================================="
-          echo "EXTERN DIRECTORY"
+          echo "XUIText.hpp"
           echo "===================================================="
-          find extern -maxdepth 8 -type f | sort || true
+          XUI_TEXT="extern/includes/chatplex-sdk-bs/shared/CP_SDK/XUI/XUIText.hpp"
+
+          if [ -f "$XUI_TEXT" ]; then
+            sed -n '1,260p' "$XUI_TEXT"
+          else
+            echo "XUIText.hpp not found at expected path."
+            echo "Searching..."
+            find extern -type f -name 'XUIText.hpp' -print
+          fi
 
           echo ""
           echo "===================================================="
-          echo "XUITEXT"
+          echo "Related text headers"
           echo "===================================================="
-          grep -RIn --include='*.hpp' --include='*.h' --include='*.cpp' "XUIText" extern || true
+
+          find extern/includes/chatplex-sdk-bs/shared/CP_SDK             -type f             \( -iname '*text*.hpp' -o -iname '*font*.hpp' \)             -print | sort
 
           echo ""
           echo "===================================================="
-          echo "TMP_FONTASSET"
+          echo "CText-related matches"
           echo "===================================================="
-          grep -RIn --include='*.hpp' --include='*.h' --include='*.cpp' "TMP_FontAsset" extern || true
 
-          echo ""
-          echo "===================================================="
-          echo "TEXTMESHPRO"
-          echo "===================================================="
-          grep -RIn --include='*.hpp' --include='*.h' --include='*.cpp' "TextMeshPro" extern || true
-
-          echo ""
-          echo "===================================================="
-          echo "FONT-RELATED FILES"
-          echo "===================================================="
-          find extern -type f \( -iname '*font*' -o -iname '*text*' \) | sort || true
+          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'class CText|CText::|TMP_Text|TextMeshProUGUI|SetFont|set_font|get_font'             extern/includes/chatplex-sdk-bs/shared/CP_SDK             | head -500 || true
 
       - name: Build and create QMOD
         run: |
