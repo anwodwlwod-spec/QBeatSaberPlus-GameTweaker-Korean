@@ -1,83 +1,67 @@
-name: NDK build
+name: Build NDK
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
-
-env:
-  module_id: qbeatsaberplus-gametweaker
-  qmodName: QBeatSaberPlus-GameTweaker
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          submodules: true
-          lfs: true
+          submodules: recursive
 
-      - name: Setup Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v3
-
-      - name: Create ndkpath.txt
-        run: |
-          echo "$ANDROID_NDK_HOME" > "$GITHUB_WORKSPACE/ndkpath.txt"
-          cat "$GITHUB_WORKSPACE/ndkpath.txt"
-
-      - name: Setup qpm
+      - name: Setup QPM
         uses: Fernthedev/qpm-action@v1
         with:
-          workflow_token: ${{ secrets.GITHUB_TOKEN }}
-          qpm_version: version@^1.0.0
           restore: true
           cache: true
-          resolve_ndk: true
-          publish: false
-          qpm_qmod: ${{ env.qmodName }}.qmod
+
+      - name: Show extern contents
+        run: |
+          echo "===================================================="
+          echo "EXTERN DIRECTORY"
+          echo "===================================================="
+          find extern -maxdepth 5 -type f | sort || true
+
+          echo ""
+          echo "===================================================="
+          echo "XUITEXT"
+          echo "===================================================="
+          grep -R "class XUIText" extern || true
+          grep -R "XUIText" extern || true
+
+          echo ""
+          echo "===================================================="
+          echo "TMP_FONTASSET"
+          echo "===================================================="
+          grep -R "TMP_FontAsset" extern || true
+
+          echo ""
+          echo "===================================================="
+          echo "TEXTMESHPRO"
+          echo "===================================================="
+          grep -R "TextMeshPro" extern || true
+
+          echo ""
+          echo "===================================================="
+          echo "FONT"
+          echo "===================================================="
+          grep -R "font" extern | head -300 || true
 
       - name: Build and create QMOD
         run: |
           cd "$GITHUB_WORKSPACE"
           qpm s qmod
 
-      - name: Get library name
-        id: libname
-        shell: bash
-        run: |
-          cd "$GITHUB_WORKSPACE/build"
-          shopt -s nullglob
-          files=(lib${module_id}*.so)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No compiled .so file found."
-            exit 1
-          fi
-          echo "NAME=${files[0]}" >> "$GITHUB_OUTPUT"
-
-      - name: Upload release library
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.libname.outputs.NAME }}
-          path: ./build/${{ steps.libname.outputs.NAME }}
-          if-no-files-found: error
-
-      - name: Upload debug library
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug_${{ steps.libname.outputs.NAME }}
-          path: ./build/debug/${{ steps.libname.outputs.NAME }}
-          if-no-files-found: error
-
-      - name: Upload QMOD
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.qmodName }}.qmod
-          path: ./${{ env.qmodName }}.qmod
-          if-no-files-found: error
+          name: Build
+          path: |
+            build/**/*.so
+            *.qmod
