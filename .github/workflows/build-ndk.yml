@@ -43,35 +43,48 @@ jobs:
           publish: false
           qpm_qmod: ${{ env.qmodName }}.qmod
 
-      - name: Print XUIText and text component headers
+      - name: Print TextFactory UISystem and CText
         shell: bash
         run: |
-          echo "===================================================="
-          echo "XUIText.hpp"
-          echo "===================================================="
-          XUI_TEXT="extern/includes/chatplex-sdk-bs/shared/CP_SDK/XUI/XUIText.hpp"
+          ROOT="extern/includes/chatplex-sdk-bs/shared/CP_SDK"
 
-          if [ -f "$XUI_TEXT" ]; then
-            sed -n '1,260p' "$XUI_TEXT"
-          else
-            echo "XUIText.hpp not found at expected path."
-            echo "Searching..."
-            find extern -type f -name 'XUIText.hpp' -print
-          fi
+          echo "===================================================="
+          echo "MATCHING FILE PATHS"
+          echo "===================================================="
+          find "$ROOT" -type f \(             -iname '*TextFactory*' -o             -iname '*UISystem*' -o             -iname '*CText*'           \) -print | sort || true
 
           echo ""
           echo "===================================================="
-          echo "Related text headers"
+          echo "TEXTFACTORY MATCHES"
           echo "===================================================="
-
-          find extern/includes/chatplex-sdk-bs/shared/CP_SDK             -type f             \( -iname '*text*.hpp' -o -iname '*font*.hpp' \)             -print | sort
+          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'TextFactory|Create\(.*CText|Create\(.*Text'             "$ROOT" | head -800 || true
 
           echo ""
           echo "===================================================="
-          echo "CText-related matches"
+          echo "UISYSTEM MATCHES"
+          echo "===================================================="
+          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'class UISystem|struct UISystem|UISystem::|TextFactory'             "$ROOT" | head -800 || true
+
+          echo ""
+          echo "===================================================="
+          echo "CTEXT MATCHES"
+          echo "===================================================="
+          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'class CText|struct CText|CText::|TMP_Text|TextMeshProUGUI|set_font|get_font|SetFont|fontAsset|FontAsset'             "$ROOT" | head -1200 || true
+
+          echo ""
+          echo "===================================================="
+          echo "PRINT MATCHING FILE CONTENTS"
           echo "===================================================="
 
-          grep -RIn             --include='*.hpp'             --include='*.h'             --include='*.cpp'             -E 'class CText|CText::|TMP_Text|TextMeshProUGUI|SetFont|set_font|get_font'             extern/includes/chatplex-sdk-bs/shared/CP_SDK             | head -500 || true
+          while IFS= read -r file; do
+            echo ""
+            echo "####################################################"
+            echo "FILE: $file"
+            echo "####################################################"
+            sed -n '1,400p' "$file"
+          done < <(
+            find "$ROOT" -type f \(               -iname '*TextFactory*' -o               -iname '*UISystem*' -o               -iname '*CText*'             \) | sort
+          )
 
       - name: Build and create QMOD
         run: |
