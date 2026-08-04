@@ -98,7 +98,7 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
         {
             const int l_DefaultCount = std::min(
                 static_cast<int>(m_DefaultPresetBackup.size()),
-                m_DefaultPreset->____lightIdColorPairs->get_Length()
+                static_cast<int>(m_DefaultPreset->____lightIdColorPairs->get_Length())
             );
 
             for (int l_I = 0; l_I < l_DefaultCount; ++l_I)
@@ -111,7 +111,7 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
             {
                 const int l_ClearedCount = std::min(
                     static_cast<int>(m_LevelClearedPresetBackup.size()),
-                    m_LevelClearedPreset->____lightIdColorPairs->get_Length()
+                    static_cast<int>(m_LevelClearedPreset->____lightIdColorPairs->get_Length())
                 );
 
                 for (int l_I = 0; l_I < l_ClearedCount; ++l_I)
@@ -122,7 +122,7 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
 
                 const int l_FailedCount = std::min(
                     static_cast<int>(m_LevelFailedPresetBackup.size()),
-                    m_LevelFailedPreset->____lightIdColorPairs->get_Length()
+                    static_cast<int>(m_LevelFailedPreset->____lightIdColorPairs->get_Length())
                 );
 
                 for (int l_I = 0; l_I < l_FailedCount; ++l_I)
