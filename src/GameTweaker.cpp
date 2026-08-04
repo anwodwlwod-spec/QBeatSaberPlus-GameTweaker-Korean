@@ -84,58 +84,32 @@ namespace QBeatSaberPlus_GameTweaker {
     /// @brief Update patches
     /// @param p_ForceDisable Force disable
     void GameTweaker::UpdatePatches(bool p_ForceDisable)
+{
+    Logger::Instance->Info(
+        p_ForceDisable
+            ? u"[GameTweaker-Diag] UpdatePatches: DISABLE"
+            : u"[GameTweaker-Diag] UpdatePatches: ENABLE"
+    );
+
+    try
     {
-        ////////////////////////////////////////////////////////////////////////////
-        /// GamePlay
-        ////////////////////////////////////////////////////////////////////////////
+        Logger::Instance->Info(u"[GameTweaker-Diag] Before PNoteCutCoreEffectsSpawner");
 
-        /// Apply cut particles
-        try {
-            Patches::PNoteCutCoreEffectsSpawner::SetRemoveCutParticles(!p_ForceDisable && GTConfig::Instance()->RemoveAllCutParticles);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PNoteCutCoreEffectsSpawner"); Logger::Instance->Error(p_PatchException); }
-        /// Apply obstacle particles
-        try {
-            Patches::PObstacleSaberSparkleEffectManager::SetRemoveObstacleParticles(!p_ForceDisable && GTConfig::Instance()->RemoveObstacleParticles);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PObstacleSaberSparkleEffectManager"); Logger::Instance->Error(p_PatchException); }
-        /// Apply burn mark particles
-        try {
-            Patches::PSaberBurnMarkSparkles::SetRemoveSaberBurnMarkSparkles(!p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarkSparkles);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PSaberBurnMarkSparkles"); Logger::Instance->Error(p_PatchException); }
-        /// Apply burn mark effect
-        try {
-            Patches::PSaberBurnMarkArea::SetRemoveSaberBurnMarks(!p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarks);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PSaberBurnMarkArea"); Logger::Instance->Error(p_PatchException); }
-        /// Apply saber clash effects
-        try {
-            Patches::PSaberClashEffect::SetRemoveClashEffects(!p_ForceDisable && GTConfig::Instance()->RemoveSaberClashEffects);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PSaberClashEffect"); Logger::Instance->Error(p_PatchException); }
-        /// World particles
-        try {
-            UpdateWorldParticles(p_ForceDisable);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating UpdateWorldParticles"); Logger::Instance->Error(p_PatchException); }
+        Patches::PNoteCutCoreEffectsSpawner::SetRemoveCutParticles(
+            !p_ForceDisable &&
+            GTConfig::Instance()->RemoveAllCutParticles
+        );
 
-        ////////////////////////////////////////////////////////////////////////////
-        /// Menu
-        ////////////////////////////////////////////////////////////////////////////
-
-        /// Apply show player statistics in main menu
-        try {
-            Patches::PMainMenuViewController::SetRemovePackMusicPromoBanner(!p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PMainMenuViewController"); Logger::Instance->Error(p_PatchException); }
-        /// Apply new content promotional settings
-        try {
-            Patches::PMusicPackPromoBanner::SetEnabled(!p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PPromoViewController"); Logger::Instance->Error(p_PatchException); }
-        /// Apply player settings
-        try {
-            Patches::PPlayerSettingsPanelController::SetReorderEnabled(!p_ForceDisable && GTConfig::Instance()->PlayerOptions->ReorderPlayerSettings, !p_ForceDisable && GTConfig::Instance()->PlayerOptions->OverrideLightIntensityOption);
-            Patches::PPlayerSettingsPanelController::SetLightsOptionMerging(!p_ForceDisable && GTConfig::Instance()->PlayerOptions->MergeLightPressetOptions);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PlayerSettingsPanelController"); Logger::Instance->Error(p_PatchException); }
-        /// Apply remove base game filter button settings
-        try {
-            Patches::PLevelSearchViewController::SetRemoveBaseGameFilter(!p_ForceDisable && GTConfig::Instance()->LevelSelection->RemoveBaseGameFilterButton);
-        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PLevelSearchViewController"); Logger::Instance->Error(p_PatchException); }
+        Logger::Instance->Info(u"[GameTweaker-Diag] After PNoteCutCoreEffectsSpawner");
     }
+    catch (const std::exception& p_PatchException)
+    {
+        Logger::Instance->Error(u"[GameTweaker-Diag] Error on PNoteCutCoreEffectsSpawner");
+        Logger::Instance->Error(p_PatchException);
+    }
+
+    Logger::Instance->Info(u"[GameTweaker-Diag] UpdatePatches completed");
+}
     /// @brief Update world particles
     /// @param p_ForceDisable Force disable
     void GameTweaker::UpdateWorldParticles(bool p_ForceDisable)
