@@ -54,8 +54,12 @@ namespace QBeatSaberPlus_GameTweaker {
         /// Update patches
         UpdatePatches(true);
 
-        CP_SDK::UI::UISystem::DestroyUI(&m_SettingsLeftView);
-        CP_SDK::UI::UISystem::DestroyUI(&m_SettingsMainView);
+        /// Do not destroy the module settings UI synchronously here.
+        /// The BS+ module switch can call OnDisable while one of these view
+        /// controllers is still active. Destroying the active UI in that call
+        /// path can leave CP_SDK accessing a released Unity component and crash.
+        /// Keeping the cached views is safe; they are reused if the module is
+        /// enabled again and are released when the game process exits.
 
         /// Unbind event
         CP_SDK_BS::Game::Logic::OnSceneChange  -= {this, &GameTweaker::Game_OnSceneChange};
