@@ -4,6 +4,8 @@
 
 #include <CP_SDK/Unity/MTCoroutineStarter.hpp>
 
+#include <algorithm>
+
 #include <GlobalNamespace/MenuLightsPresetSO.hpp>
 #include <GlobalNamespace/SoloFreePlayFlowCoordinator.hpp>
 #include <UnityEngine/GameObject.hpp>
@@ -43,27 +45,43 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
     /// @brief Init and start reflection fetching
     void CustomMenuLightManager::Init()
     {
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Init START");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Init START");
 
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Default BEFORE");
+        // This manager keeps static state for the lifetime of the process.
+        // Re-enabling the module must not create another set of ColorSO objects
+        // or start a second initialization coroutine.
+        if (m_Custom_Default)
+        {
+            Logger::Instance->Info(u"[GT-LIGHT-FIX] Already initialized - reuse existing state");
+            UpdateFromConfig();
+            Logger::Instance->Info(u"[GT-LIGHT-FIX] Reuse UpdateFromConfig AFTER");
+            return;
+        }
+
+        // Ensure the first initialization always starts with empty backups.
+        m_DefaultPresetBackup.clear();
+        m_LevelClearedPresetBackup.clear();
+        m_LevelFailedPresetBackup.clear();
+
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Create Custom_Default BEFORE");
         m_Custom_Default = CustomColorSO::CreateInstance<CustomColorSO*>();
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Default AFTER");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Create Custom_Default AFTER");
 
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Cleared BEFORE");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Create Custom_Cleared BEFORE");
         m_Custom_Cleared = CustomColorSO::CreateInstance<CustomColorSO*>();
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Cleared AFTER");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Create Custom_Cleared AFTER");
 
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Failed BEFORE");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Create Custom_Failed BEFORE");
         m_Custom_Failed = CustomColorSO::CreateInstance<CustomColorSO*>();
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Failed AFTER");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Create Custom_Failed AFTER");
 
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Start Coroutine_InitLate BEFORE");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Start Coroutine_InitLate BEFORE");
         CP_SDK::Unity::MTCoroutineStarter::Start(custom_types::Helpers::CoroutineHelper::New(
             Coroutine_InitLate()
         ));
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Start Coroutine_InitLate AFTER");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Start Coroutine_InitLate AFTER");
 
-        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Init END");
+        Logger::Instance->Info(u"[GT-LIGHT-FIX] Init END");
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -78,7 +96,12 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
         auto l_Enabled = GTConfig::Instance()->MainMenu->OverrideMenuEnvColors;
         if (!l_Enabled)
         {
-            for (int l_I = 0; l_I < m_DefaultPresetBackup.size(); ++l_I)
+            const int l_DefaultCount = std::min(
+                static_cast<int>(m_DefaultPresetBackup.size()),
+                m_DefaultPreset->____lightIdColorPairs->get_Length()
+            );
+
+            for (int l_I = 0; l_I < l_DefaultCount; ++l_I)
             {
                 m_DefaultPreset->____lightIdColorPairs[l_I]->___intensity = std::get<0>(m_DefaultPresetBackup[l_I]);
                 m_DefaultPreset->____lightIdColorPairs[l_I]->___baseColor = std::get<1>(m_DefaultPresetBackup[l_I]).Ptr();
@@ -86,12 +109,23 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
 
             if (m_LevelClearedPreset && m_LevelFailedPreset)
             {
-                for (int l_I = 0; l_I < m_LevelClearedPresetBackup.size(); ++l_I)
+                const int l_ClearedCount = std::min(
+                    static_cast<int>(m_LevelClearedPresetBackup.size()),
+                    m_LevelClearedPreset->____lightIdColorPairs->get_Length()
+                );
+
+                for (int l_I = 0; l_I < l_ClearedCount; ++l_I)
                 {
                     m_LevelClearedPreset->____lightIdColorPairs[l_I]->___intensity = std::get<0>(m_LevelClearedPresetBackup[l_I]);
                     m_LevelClearedPreset->____lightIdColorPairs[l_I]->___baseColor = std::get<1>(m_LevelClearedPresetBackup[l_I]).Ptr();
                 }
-                for (int l_I = 0; l_I < m_LevelFailedPresetBackup.size(); ++l_I)
+
+                const int l_FailedCount = std::min(
+                    static_cast<int>(m_LevelFailedPresetBackup.size()),
+                    m_LevelFailedPreset->____lightIdColorPairs->get_Length()
+                );
+
+                for (int l_I = 0; l_I < l_FailedCount; ++l_I)
                 {
                     m_LevelFailedPreset->____lightIdColorPairs[l_I]->___intensity = std::get<0>(m_LevelFailedPresetBackup[l_I]);
                     m_LevelFailedPreset->____lightIdColorPairs[l_I]->___baseColor = std::get<1>(m_LevelFailedPresetBackup[l_I]).Ptr();
