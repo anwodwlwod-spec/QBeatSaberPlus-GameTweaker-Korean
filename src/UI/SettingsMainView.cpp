@@ -113,8 +113,9 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         /// Diagnostic only: list loaded fonts that fully support the problematic Korean glyphs.
         LogKoreanFontCandidates();
 
-        /// Refresh UI
-        OnSettingChanged();
+        /// Diagnostic: do not call OnSettingChanged() during view creation.
+        /// This avoids re-applying patches while BS+/CP_SDK is attaching the new view.
+        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged during view creation");
     }
     /// @brief On view deactivation
     void SettingsMainView::OnViewDeactivation_Impl()
@@ -432,8 +433,9 @@ namespace QBeatSaberPlus_GameTweaker::UI {
 
         m_PreventChanges = false;
 
-        /// Refresh UI
-        OnSettingChanged();
+        /// Diagnostic: do not call OnSettingChanged() immediately after refresh.
+        /// This prevents a second patch application during UI reactivation.
+        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged after RefreshSettings");
     }
 
 }   ///< namespace QBeatSaberPlus_GameTweaker::UI
