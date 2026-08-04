@@ -72,8 +72,16 @@ namespace QBeatSaberPlus_GameTweaker {
     /// @brief Get Module settings UI
     GameTweaker::t_InitialViews GameTweaker::GetSettingsViewControllers()
     {
-        if (!m_SettingsMainView) m_SettingsMainView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsMainView*>();
-        if (!m_SettingsLeftView) m_SettingsLeftView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsLeftView*>();
+        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Creating fresh settings views");
+
+        /// Diagnostic:
+        /// Always create fresh view controllers instead of reusing cached
+        /// references that may point to Unity objects destroyed by CP_SDK
+        /// while the module was disabled.
+        m_SettingsMainView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsMainView*>();
+        m_SettingsLeftView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsLeftView*>();
+
+        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Fresh settings views created");
 
         return { m_SettingsMainView.Ptr(), m_SettingsLeftView.Ptr(), nullptr};
     }
@@ -84,32 +92,32 @@ namespace QBeatSaberPlus_GameTweaker {
     /// @brief Update patches
     /// @param p_ForceDisable Force disable
     void GameTweaker::UpdatePatches(bool p_ForceDisable)
-{
-    Logger::Instance->Info(
-        p_ForceDisable
-            ? u"[GameTweaker-Diag] UpdatePatches: DISABLE"
-            : u"[GameTweaker-Diag] UpdatePatches: ENABLE"
-    );
-
-    try
     {
-        Logger::Instance->Info(u"[GameTweaker-Diag] Before PNoteCutCoreEffectsSpawner");
-
-        Patches::PNoteCutCoreEffectsSpawner::SetRemoveCutParticles(
-            !p_ForceDisable &&
-            GTConfig::Instance()->RemoveAllCutParticles
+        Logger::Instance->Info(
+            p_ForceDisable
+                ? u"[GameTweaker-Diag] UpdatePatches: DISABLE"
+                : u"[GameTweaker-Diag] UpdatePatches: ENABLE"
         );
 
-        Logger::Instance->Info(u"[GameTweaker-Diag] After PNoteCutCoreEffectsSpawner");
-    }
-    catch (const std::exception& p_PatchException)
-    {
-        Logger::Instance->Error(u"[GameTweaker-Diag] Error on PNoteCutCoreEffectsSpawner");
-        Logger::Instance->Error(p_PatchException);
-    }
+        try
+        {
+            Logger::Instance->Info(u"[GameTweaker-Diag] Before PNoteCutCoreEffectsSpawner");
 
-    Logger::Instance->Info(u"[GameTweaker-Diag] UpdatePatches completed");
-}
+            Patches::PNoteCutCoreEffectsSpawner::SetRemoveCutParticles(
+                !p_ForceDisable &&
+                GTConfig::Instance()->RemoveAllCutParticles
+            );
+
+            Logger::Instance->Info(u"[GameTweaker-Diag] After PNoteCutCoreEffectsSpawner");
+        }
+        catch (const std::exception& p_PatchException)
+        {
+            Logger::Instance->Error(u"[GameTweaker-Diag] Error on PNoteCutCoreEffectsSpawner");
+            Logger::Instance->Error(p_PatchException);
+        }
+
+        Logger::Instance->Info(u"[GameTweaker-Diag] UpdatePatches completed");
+    }
     /// @brief Update world particles
     /// @param p_ForceDisable Force disable
     void GameTweaker::UpdateWorldParticles(bool p_ForceDisable)
