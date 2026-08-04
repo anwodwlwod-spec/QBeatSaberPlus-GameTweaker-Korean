@@ -39,31 +39,52 @@ namespace QBeatSaberPlus_GameTweaker {
     /// @brief Enable the Module
     void GameTweaker::OnEnable()
     {
-        /// Bind event
-        CP_SDK_BS::Game::Logic::OnSceneChange  += {this, &GameTweaker::Game_OnSceneChange};
+        Logger::Instance->Info(u"[GT-FULL-DIAG] OnEnable START");
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnSceneChange BEFORE");
+        CP_SDK_BS::Game::Logic::OnSceneChange += {this, &GameTweaker::Game_OnSceneChange};
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnSceneChange AFTER");
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnLevelStarted BEFORE");
         CP_SDK_BS::Game::Logic::OnLevelStarted += {this, &GameTweaker::Game_OnLevelStarted};
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnLevelStarted AFTER");
 
+        Logger::Instance->Info(u"[GT-FULL-DIAG] CustomMenuLightManager::Init BEFORE");
         Managers::CustomMenuLightManager::Init();
+        Logger::Instance->Info(u"[GT-FULL-DIAG] CustomMenuLightManager::Init AFTER");
 
-        /// Update patches
+        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(false) BEFORE");
         UpdatePatches(false);
+        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(false) AFTER");
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] OnEnable END");
     }
     /// @brief Disable the Module
     void GameTweaker::OnDisable()
     {
-        /// Update patches
+        Logger::Instance->Info(u"[GT-FULL-DIAG] OnDisable START");
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(true) BEFORE");
         UpdatePatches(true);
+        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(true) AFTER");
 
-        /// Do not destroy the module settings UI synchronously here.
-        /// The BS+ module switch can call OnDisable while one of these view
-        /// controllers is still active. Destroying the active UI in that call
-        /// path can leave CP_SDK accessing a released Unity component and crash.
-        /// Keeping the cached views is safe; they are reused if the module is
-        /// enabled again and are released when the game process exits.
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsLeftView BEFORE");
+        CP_SDK::UI::UISystem::DestroyUI(&m_SettingsLeftView);
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsLeftView AFTER");
 
-        /// Unbind event
-        CP_SDK_BS::Game::Logic::OnSceneChange  -= {this, &GameTweaker::Game_OnSceneChange};
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsMainView BEFORE");
+        CP_SDK::UI::UISystem::DestroyUI(&m_SettingsMainView);
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsMainView AFTER");
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnSceneChange BEFORE");
+        CP_SDK_BS::Game::Logic::OnSceneChange -= {this, &GameTweaker::Game_OnSceneChange};
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnSceneChange AFTER");
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnLevelStarted BEFORE");
         CP_SDK_BS::Game::Logic::OnLevelStarted -= {this, &GameTweaker::Game_OnLevelStarted};
+        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnLevelStarted AFTER");
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] OnDisable END");
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -72,17 +93,31 @@ namespace QBeatSaberPlus_GameTweaker {
     /// @brief Get Module settings UI
     GameTweaker::t_InitialViews GameTweaker::GetSettingsViewControllers()
     {
-        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Creating fresh settings views");
+        Logger::Instance->Info(u"[GT-FULL-DIAG] GetSettingsViewControllers START");
 
-        /// Diagnostic:
-        /// Always create fresh view controllers instead of reusing cached
-        /// references that may point to Unity objects destroyed by CP_SDK
-        /// while the module was disabled.
-        m_SettingsMainView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsMainView*>();
-        m_SettingsLeftView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsLeftView*>();
+        if (!m_SettingsMainView)
+        {
+            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsMainView BEFORE");
+            m_SettingsMainView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsMainView*>();
+            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsMainView AFTER");
+        }
+        else
+        {
+            Logger::Instance->Info(u"[GT-FULL-DIAG] Reuse SettingsMainView");
+        }
 
-        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Fresh settings views created");
+        if (!m_SettingsLeftView)
+        {
+            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsLeftView BEFORE");
+            m_SettingsLeftView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsLeftView*>();
+            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsLeftView AFTER");
+        }
+        else
+        {
+            Logger::Instance->Info(u"[GT-FULL-DIAG] Reuse SettingsLeftView");
+        }
 
+        Logger::Instance->Info(u"[GT-FULL-DIAG] GetSettingsViewControllers END");
         return { m_SettingsMainView.Ptr(), m_SettingsLeftView.Ptr(), nullptr};
     }
 
@@ -95,28 +130,99 @@ namespace QBeatSaberPlus_GameTweaker {
     {
         Logger::Instance->Info(
             p_ForceDisable
-                ? u"[GameTweaker-Diag] UpdatePatches: DISABLE"
-                : u"[GameTweaker-Diag] UpdatePatches: ENABLE"
+                ? u"[GT-FULL-DIAG] UpdatePatches START DISABLE"
+                : u"[GT-FULL-DIAG] UpdatePatches START ENABLE"
         );
 
-        try
-        {
-            Logger::Instance->Info(u"[GameTweaker-Diag] Before PNoteCutCoreEffectsSpawner");
+        #define GT_DIAG_PATCH(NAME, CALL) \
+            try { \
+                Logger::Instance->Info(u"[GT-FULL-DIAG] " NAME u" BEFORE"); \
+                CALL; \
+                Logger::Instance->Info(u"[GT-FULL-DIAG] " NAME u" AFTER"); \
+            } catch (const std::exception& p_PatchException) { \
+                Logger::Instance->Error(u"[GT-FULL-DIAG] " NAME u" EXCEPTION"); \
+                Logger::Instance->Error(p_PatchException); \
+            }
 
+        GT_DIAG_PATCH(
+            u"PNoteCutCoreEffectsSpawner",
             Patches::PNoteCutCoreEffectsSpawner::SetRemoveCutParticles(
-                !p_ForceDisable &&
-                GTConfig::Instance()->RemoveAllCutParticles
-            );
+                !p_ForceDisable && GTConfig::Instance()->RemoveAllCutParticles
+            )
+        );
 
-            Logger::Instance->Info(u"[GameTweaker-Diag] After PNoteCutCoreEffectsSpawner");
-        }
-        catch (const std::exception& p_PatchException)
-        {
-            Logger::Instance->Error(u"[GameTweaker-Diag] Error on PNoteCutCoreEffectsSpawner");
-            Logger::Instance->Error(p_PatchException);
-        }
+        GT_DIAG_PATCH(
+            u"PObstacleSaberSparkleEffectManager",
+            Patches::PObstacleSaberSparkleEffectManager::SetRemoveObstacleParticles(
+                !p_ForceDisable && GTConfig::Instance()->RemoveObstacleParticles
+            )
+        );
 
-        Logger::Instance->Info(u"[GameTweaker-Diag] UpdatePatches completed");
+        GT_DIAG_PATCH(
+            u"PSaberBurnMarkSparkles",
+            Patches::PSaberBurnMarkSparkles::SetRemoveSaberBurnMarkSparkles(
+                !p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarkSparkles
+            )
+        );
+
+        GT_DIAG_PATCH(
+            u"PSaberBurnMarkArea",
+            Patches::PSaberBurnMarkArea::SetRemoveSaberBurnMarks(
+                !p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarks
+            )
+        );
+
+        GT_DIAG_PATCH(
+            u"PSaberClashEffect",
+            Patches::PSaberClashEffect::SetRemoveClashEffects(
+                !p_ForceDisable && GTConfig::Instance()->RemoveSaberClashEffects
+            )
+        );
+
+        GT_DIAG_PATCH(
+            u"UpdateWorldParticles",
+            UpdateWorldParticles(p_ForceDisable)
+        );
+
+        GT_DIAG_PATCH(
+            u"PMainMenuViewController",
+            Patches::PMainMenuViewController::SetRemovePackMusicPromoBanner(
+                !p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional
+            )
+        );
+
+        GT_DIAG_PATCH(
+            u"PMusicPackPromoBanner",
+            Patches::PMusicPackPromoBanner::SetEnabled(
+                !p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional
+            )
+        );
+
+        GT_DIAG_PATCH(
+            u"PPlayerSettingsPanelController SetReorderEnabled",
+            Patches::PPlayerSettingsPanelController::SetReorderEnabled(
+                !p_ForceDisable && GTConfig::Instance()->PlayerOptions->ReorderPlayerSettings,
+                !p_ForceDisable && GTConfig::Instance()->PlayerOptions->OverrideLightIntensityOption
+            )
+        );
+
+        GT_DIAG_PATCH(
+            u"PPlayerSettingsPanelController SetLightsOptionMerging",
+            Patches::PPlayerSettingsPanelController::SetLightsOptionMerging(
+                !p_ForceDisable && GTConfig::Instance()->PlayerOptions->MergeLightPressetOptions
+            )
+        );
+
+        GT_DIAG_PATCH(
+            u"PLevelSearchViewController",
+            Patches::PLevelSearchViewController::SetRemoveBaseGameFilter(
+                !p_ForceDisable && GTConfig::Instance()->LevelSelection->RemoveBaseGameFilterButton
+            )
+        );
+
+        #undef GT_DIAG_PATCH
+
+        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches END");
     }
     /// @brief Update world particles
     /// @param p_ForceDisable Force disable
