@@ -1,5 +1,6 @@
 #include "Managers/CustomMenuLightManager.hpp"
 #include "GTConfig.hpp"
+#include "Logger.hpp"
 
 #include <CP_SDK/Unity/MTCoroutineStarter.hpp>
 
@@ -42,13 +43,27 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
     /// @brief Init and start reflection fetching
     void CustomMenuLightManager::Init()
     {
-        m_Custom_Default = CustomColorSO::CreateInstance<CustomColorSO*>();
-        m_Custom_Cleared = CustomColorSO::CreateInstance<CustomColorSO*>();
-        m_Custom_Failed  = CustomColorSO::CreateInstance<CustomColorSO*>();
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Init START");
 
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Default BEFORE");
+        m_Custom_Default = CustomColorSO::CreateInstance<CustomColorSO*>();
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Default AFTER");
+
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Cleared BEFORE");
+        m_Custom_Cleared = CustomColorSO::CreateInstance<CustomColorSO*>();
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Cleared AFTER");
+
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Failed BEFORE");
+        m_Custom_Failed = CustomColorSO::CreateInstance<CustomColorSO*>();
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Create Custom_Failed AFTER");
+
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Start Coroutine_InitLate BEFORE");
         CP_SDK::Unity::MTCoroutineStarter::Start(custom_types::Helpers::CoroutineHelper::New(
             Coroutine_InitLate()
         ));
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Start Coroutine_InitLate AFTER");
+
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Init END");
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -183,39 +198,62 @@ namespace QBeatSaberPlus_GameTweaker::Managers {
     /// @brief Init coroutine that fetch object by reflection
     custom_types::Helpers::Coroutine CustomMenuLightManager::Coroutine_InitLate()
     {
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Coroutine_InitLate START");
+
         while (!m_MenuLightsManager)
         {
             co_yield nullptr;
 
             auto l_Found = GameObject::FindObjectOfType<MenuLightsManager*>();
             if (l_Found)
+            {
+                Logger::Instance->Info(u"[GT-LIGHT-DIAG] MenuLightsManager FOUND");
                 m_MenuLightsManager = l_Found;
+            }
         }
 
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Read default preset BEFORE");
         m_DefaultPreset = m_MenuLightsManager->____defaultPreset;
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Read default preset AFTER");
 
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Backup default preset BEFORE");
         for (auto& l_Current : m_DefaultPreset->____lightIdColorPairs)
             m_DefaultPresetBackup.push_back(std::make_tuple(l_Current->___intensity, l_Current->___baseColor.unsafePtr()));
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Backup default preset AFTER");
 
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] First UpdateFromConfig BEFORE");
         UpdateFromConfig();
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] First UpdateFromConfig AFTER");
 
         SoloFreePlayFlowCoordinator* l_SoloFreePlayFlowCoordinator = nullptr;
         while (!l_SoloFreePlayFlowCoordinator)
         {
             co_yield nullptr;
             l_SoloFreePlayFlowCoordinator = GameObject::FindObjectOfType<SoloFreePlayFlowCoordinator*>();
+            if (l_SoloFreePlayFlowCoordinator)
+                Logger::Instance->Info(u"[GT-LIGHT-DIAG] SoloFreePlayFlowCoordinator FOUND");
         }
 
-        m_LevelClearedPreset    = l_SoloFreePlayFlowCoordinator->____resultsClearedLightsPreset;
-        m_LevelFailedPreset     = l_SoloFreePlayFlowCoordinator->____resultsFailedLightsPreset;
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Read result presets BEFORE");
+        m_LevelClearedPreset = l_SoloFreePlayFlowCoordinator->____resultsClearedLightsPreset;
+        m_LevelFailedPreset  = l_SoloFreePlayFlowCoordinator->____resultsFailedLightsPreset;
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Read result presets AFTER");
 
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Backup cleared preset BEFORE");
         for (auto& l_Current : m_LevelClearedPreset->____lightIdColorPairs)
             m_LevelClearedPresetBackup.push_back(std::make_tuple(l_Current->___intensity, l_Current->___baseColor.unsafePtr()));
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Backup cleared preset AFTER");
 
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Backup failed preset BEFORE");
         for (auto& l_Current : m_LevelFailedPreset->____lightIdColorPairs)
             m_LevelFailedPresetBackup.push_back(std::make_tuple(l_Current->___intensity, l_Current->___baseColor.unsafePtr()));
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Backup failed preset AFTER");
 
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Second UpdateFromConfig BEFORE");
         UpdateFromConfig();
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Second UpdateFromConfig AFTER");
+
+        Logger::Instance->Info(u"[GT-LIGHT-DIAG] Coroutine_InitLate END");
     }
 
     ////////////////////////////////////////////////////////////////////////////
