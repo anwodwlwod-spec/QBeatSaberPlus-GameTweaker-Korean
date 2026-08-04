@@ -33,13 +33,15 @@ jobs:
           cat "${GITHUB_WORKSPACE}/ndkpath.txt"
 
       - name: Setup qpm
-        uses: Fernthedev/qpm-action@main
-        with:
-          workflow_token: ${{ secrets.GITHUB_TOKEN }}
-          restore: true
-          cache: true
-          publish: false
-          qpm_qmod: ${{ env.qmodName }}.qmod
+  uses: Fernthedev/qpm-action@v1
+  with:
+    workflow_token: ${{ secrets.GITHUB_TOKEN }}
+    qpm_version: version@^1.0.0
+    restore: true
+    cache: true
+    resolve_ndk: true
+    publish: false
+    qpm_qmod: ${{ env.qmodName }}.qmod
 
       - name: Build and create QMOD
         run: |
