@@ -7,11 +7,64 @@
 #include <CP_SDK/UI/ValueFormatters.hpp>
 #include <CP_SDK/Unity/Extensions/ColorU.hpp>
 
+#include <TMPro/TMP_FontAsset.hpp>
+#include <UnityEngine/Resources.hpp>
+
 using namespace CP_SDK::Unity::Extensions;
 using namespace CP_SDK::XUI;
 using namespace UnityEngine;
 
 namespace QBeatSaberPlus_GameTweaker::UI {
+
+    /// @brief Log loaded TMP fonts that can render the Korean glyphs that were
+    ///        visually smaller in the translated UI. This is diagnostic only:
+    ///        it does not change any font or affect another mod.
+    static void LogKoreanFontCandidates()
+    {
+        static bool s_HasRun = false;
+        if (s_HasRun)
+            return;
+        s_HasRun = true;
+
+        try
+        {
+            auto l_Fonts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_FontAsset*>();
+            Logger::Instance->Info(u"[KoreanFontDiag] Scanning loaded TMP font assets...");
+
+            int l_Total = 0;
+            int l_Matches = 0;
+            for (auto& l_Font : l_Fonts)
+            {
+                if (!l_Font)
+                    continue;
+
+                ++l_Total;
+                const bool l_Group = l_Font->HasCharacter(u'룹', false, false);
+                const bool l_Combo = l_Font->HasCharacter(u'콤', false, false);
+                const bool l_Bright = l_Font->HasCharacter(u'밝', false, false);
+                const bool l_Promo = l_Font->HasCharacter(u'홍', false, false);
+                const bool l_Firework = l_Font->HasCharacter(u'죽', false, false);
+
+                if (!(l_Group && l_Combo && l_Bright && l_Promo && l_Firework))
+                    continue;
+
+                ++l_Matches;
+                std::u16string l_Message = u"[KoreanFontDiag] Candidate: ";
+                l_Message += l_Font->get_name();
+                Logger::Instance->Info(l_Message);
+            }
+
+            if (l_Matches == 0)
+                Logger::Instance->Info(u"[KoreanFontDiag] Scan complete: no font supports all test glyphs.");
+            else
+                Logger::Instance->Info(u"[KoreanFontDiag] Scan complete: one or more candidates found above.");
+        }
+        catch (const std::exception& l_Exception)
+        {
+            Logger::Instance->Error(u"[KoreanFontDiag] Font scan failed:");
+            Logger::Instance->Error(l_Exception);
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -56,6 +109,9 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         })
         ->SetBackground(true, std::nullopt, true)
         ->BuildUI(get_transform());
+
+        /// Diagnostic only: list loaded fonts that fully support the problematic Korean glyphs.
+        LogKoreanFontCandidates();
 
         /// Refresh UI
         OnSettingChanged();
