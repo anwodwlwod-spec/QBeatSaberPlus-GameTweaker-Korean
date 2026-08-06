@@ -59,5 +59,6 @@ namespace IncludedAssets {
 	DECLARE_FILE(Prev_png)
 	DECLARE_FILE(Rand_png)
 	DECLARE_FILE(Sound_png)
+	DECLARE_FILE(QuestFonts_bundle)
 
 }
