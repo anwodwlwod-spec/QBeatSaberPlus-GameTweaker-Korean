@@ -4,6 +4,9 @@ include(qpm_defines.cmake)
 cmake_minimum_required(VERSION 3.22)
 project(${COMPILE_ID})
 
+# Embed files from the assets folder into the mod library
+include(${EXTERN_DIR}/includes/kaleb/shared/cmake/assets.cmake)
+
 # c++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
@@ -100,7 +103,9 @@ target_include_directories(${COMPILE_ID} PUBLIC ${SHARED_DIR})
 # chatplex-sdk-bs includes
 target_include_directories(${COMPILE_ID} PRIVATE ${EXTERN_DIR}/includes/chatplex-sdk-bs/shared)
 
-target_link_libraries(${COMPILE_ID} PRIVATE -llog -lz)
+# Embed assets/QuestFonts.bundle and link the generated static asset library
+add_assets(${COMPILE_ID}-assets STATIC ${CMAKE_CURRENT_LIST_DIR}/assets ${INCLUDE_DIR}/assets.hpp)
+target_link_libraries(${COMPILE_ID} PRIVATE -llog -lz ${COMPILE_ID}-assets)
 
 # add extern stuff like libs and other includes
 include(extern.cmake)
