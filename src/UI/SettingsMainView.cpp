@@ -3,13 +3,18 @@
 #include "GameTweaker.hpp"
 #include "GTConfig.hpp"
 #include "Logger.hpp"
+#include "assets.hpp"
 
 #include <CP_SDK/UI/ValueFormatters.hpp>
 #include <CP_SDK/Unity/Extensions/ColorU.hpp>
 
 #include <TMPro/TMP_FontAsset.hpp>
 #include <TMPro/TMP_Text.hpp>
+#include <UnityEngine/AssetBundle.hpp>
+#include <UnityEngine/Object.hpp>
 #include <UnityEngine/Resources.hpp>
+#include <UnityEngine/Transform.hpp>
+#include <beatsaber-hook/shared/utils/il2cpp-functions.hpp>
 
 using namespace CP_SDK::Unity::Extensions;
 using namespace CP_SDK::XUI;
@@ -17,141 +22,117 @@ using namespace UnityEngine;
 
 namespace QBeatSaberPlus_GameTweaker::UI {
 
-    /// @brief Log loaded TMP fonts that can render the Korean glyphs that were
-    ///        visually smaller in the translated UI. This is diagnostic only:
-    ///        it does not change any font or affect another mod.
-    static void LogKoreanFontCandidates()
+    static UnityEngine::AssetBundle* s_KoreanFontBundle = nullptr;
+    static TMPro::TMP_FontAsset* s_KoreanFont = nullptr;
+
+    /// @brief Return true when the font directly contains every Korean glyph that
+    ///        was previously rendered at a smaller fallback size.
+    static bool SupportsProblematicKoreanGlyphs(TMPro::TMP_FontAsset* p_Font)
     {
-        static bool s_HasRun = false;
-        if (s_HasRun)
-            return;
-        s_HasRun = true;
+        return p_Font
+            && p_Font->HasCharacter(u'룹', false, false)
+            && p_Font->HasCharacter(u'콤', false, false)
+            && p_Font->HasCharacter(u'밝', false, false)
+            && p_Font->HasCharacter(u'홍', false, false)
+            && p_Font->HasCharacter(u'죽', false, false);
+    }
+
+    /// @brief Load the CP_SDK font AssetBundle embedded in this mod.
+    static TMPro::TMP_FontAsset* LoadKoreanFont()
+    {
+        if (s_KoreanFont)
+            return s_KoreanFont;
 
         try
         {
-            auto l_Fonts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_FontAsset*>();
-            Logger::Instance->Info(u"[KoreanFontDiag] Scanning loaded TMP font assets...");
+            using t_LoadFromMemory = UnityEngine::AssetBundle* (*)(::Array<uint8_t>*, unsigned int);
 
-            int l_Total = 0;
-            int l_Matches = 0;
-            for (auto& l_Font : l_Fonts)
+            static auto s_LoadFromMemory = reinterpret_cast<t_LoadFromMemory>(
+                il2cpp_functions::resolve_icall("UnityEngine.AssetBundle::LoadFromMemory_Internal")
+            );
+
+            if (!s_LoadFromMemory)
             {
-                if (!l_Font)
-                    continue;
-
-                ++l_Total;
-                const bool l_Group = l_Font->HasCharacter(u'룹', false, false);
-                const bool l_Combo = l_Font->HasCharacter(u'콤', false, false);
-                const bool l_Bright = l_Font->HasCharacter(u'밝', false, false);
-                const bool l_Promo = l_Font->HasCharacter(u'홍', false, false);
-                const bool l_Firework = l_Font->HasCharacter(u'죽', false, false);
-
-                if (!(l_Group && l_Combo && l_Bright && l_Promo && l_Firework))
-                    continue;
-
-                ++l_Matches;
-                std::u16string l_Message = u"[KoreanFontDiag] Candidate: ";
-                l_Message += l_Font->get_name();
-                Logger::Instance->Info(l_Message);
+                Logger::Instance->Error(u"[KoreanFont] AssetBundle LoadFromMemory icall was not found.");
+                return nullptr;
             }
 
-            if (l_Matches == 0)
-                Logger::Instance->Info(u"[KoreanFontDiag] Scan complete: no font supports all test glyphs.");
+            s_KoreanFontBundle = s_LoadFromMemory(IncludedAssets::QuestFonts_bundle.Raw(), 0);
+            if (!s_KoreanFontBundle)
+            {
+                Logger::Instance->Error(u"[KoreanFont] Failed to load QuestFonts.bundle.");
+                return nullptr;
+            }
+
+            UnityEngine::Object::DontDestroyOnLoad(s_KoreanFontBundle);
+
+            auto* l_MainFont = s_KoreanFontBundle->LoadAsset<TMPro::TMP_FontAsset*>(
+                u"[CP_SDK]segoeui SDF Main"
+            );
+            auto* l_ChatFont = s_KoreanFontBundle->LoadAsset<TMPro::TMP_FontAsset*>(
+                u"[CP_SDK]segoeui SDF"
+            );
+
+            if (SupportsProblematicKoreanGlyphs(l_MainFont))
+                s_KoreanFont = l_MainFont;
+            else if (SupportsProblematicKoreanGlyphs(l_ChatFont))
+                s_KoreanFont = l_ChatFont;
             else
-                Logger::Instance->Info(u"[KoreanFontDiag] Scan complete: one or more candidates found above.");
+            {
+                Logger::Instance->Error(
+                    u"[KoreanFont] QuestFonts.bundle loaded, but neither bundled font contains all required Korean glyphs."
+                );
+                return nullptr;
+            }
+
+            UnityEngine::Object::DontDestroyOnLoad(s_KoreanFont);
+            std::u16string l_Message = u"[KoreanFont] Loaded font: ";
+            l_Message += s_KoreanFont->get_name();
+            Logger::Instance->Info(l_Message);
+
+            return s_KoreanFont;
         }
         catch (const std::exception& l_Exception)
         {
-            Logger::Instance->Error(u"[KoreanFontDiag] Font scan failed:");
+            Logger::Instance->Error(u"[KoreanFont] Font loading failed:");
             Logger::Instance->Error(l_Exception);
+            return nullptr;
         }
     }
 
-    /// @brief Log the actual TMP font used by the translated GameTweaker labels.
-    ///        Only texts containing the known problematic Korean words are logged,
-    ///        so the Paperlog remains small and easy to inspect.
-    static void LogGameTweakerTextFonts()
+    /// @brief Apply the bundled font only to TMP texts belonging to this view.
+    static void ApplyKoreanFontToView(UnityEngine::Transform* p_ViewTransform)
     {
-        static bool s_HasRun = false;
-        if (s_HasRun)
+        auto* l_Font = LoadKoreanFont();
+        if (!l_Font || !p_ViewTransform)
             return;
-        s_HasRun = true;
 
         try
         {
             auto l_Texts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_Text*>();
-            int l_Matches = 0;
-
-            Logger::Instance->Info(u"[KoreanTextFontDiag] Scanning actual TMP_Text components...");
+            int l_AppliedCount = 0;
 
             for (auto& l_Text : l_Texts)
             {
                 if (!l_Text)
                     continue;
 
-                std::u16string l_Value = l_Text->get_text();
-                const bool l_IsTarget =
-                    l_Value.find(u"그룹") != std::u16string::npos ||
-                    l_Value.find(u"콤보") != std::u16string::npos ||
-                    l_Value.find(u"밝기") != std::u16string::npos ||
-                    l_Value.find(u"홍보") != std::u16string::npos ||
-                    l_Value.find(u"폭죽") != std::u16string::npos;
-
-                if (!l_IsTarget)
+                auto* l_Transform = l_Text->get_transform();
+                if (!l_Transform)
                     continue;
 
-                ++l_Matches;
-
-                std::u16string l_TextMessage = u"[KoreanTextFontDiag] Text: ";
-                l_TextMessage += l_Value;
-                Logger::Instance->Info(l_TextMessage);
-
-                auto l_Font = l_Text->get_font();
-                if (!l_Font)
-                {
-                    Logger::Instance->Info(u"[KoreanTextFontDiag] Font: <null>");
+                if (l_Transform != p_ViewTransform && !l_Transform->IsChildOf(p_ViewTransform))
                     continue;
-                }
 
-                std::u16string l_FontMessage = u"[KoreanTextFontDiag] Font: ";
-                l_FontMessage += l_Font->get_name();
-                Logger::Instance->Info(l_FontMessage);
-
-                Logger::Instance->Info(
-                    l_Font->HasCharacter(u'룹', false, false)
-                        ? u"[KoreanTextFontDiag] Has 룹: true"
-                        : u"[KoreanTextFontDiag] Has 룹: false"
-                );
-                Logger::Instance->Info(
-                    l_Font->HasCharacter(u'콤', false, false)
-                        ? u"[KoreanTextFontDiag] Has 콤: true"
-                        : u"[KoreanTextFontDiag] Has 콤: false"
-                );
-                Logger::Instance->Info(
-                    l_Font->HasCharacter(u'밝', false, false)
-                        ? u"[KoreanTextFontDiag] Has 밝: true"
-                        : u"[KoreanTextFontDiag] Has 밝: false"
-                );
-                Logger::Instance->Info(
-                    l_Font->HasCharacter(u'홍', false, false)
-                        ? u"[KoreanTextFontDiag] Has 홍: true"
-                        : u"[KoreanTextFontDiag] Has 홍: false"
-                );
-                Logger::Instance->Info(
-                    l_Font->HasCharacter(u'죽', false, false)
-                        ? u"[KoreanTextFontDiag] Has 죽: true"
-                        : u"[KoreanTextFontDiag] Has 죽: false"
-                );
+                l_Text->set_font(l_Font);
+                ++l_AppliedCount;
             }
 
-            if (l_Matches == 0)
-                Logger::Instance->Info(u"[KoreanTextFontDiag] No target GameTweaker texts were found.");
-            else
-                Logger::Instance->Info(u"[KoreanTextFontDiag] Scan complete.");
+            Logger::Instance->Info(u"[KoreanFont] Applied bundled font to GameTweaker view texts.");
         }
         catch (const std::exception& l_Exception)
         {
-            Logger::Instance->Error(u"[KoreanTextFontDiag] Text font scan failed:");
+            Logger::Instance->Error(u"[KoreanFont] Applying font to GameTweaker view failed:");
             Logger::Instance->Error(l_Exception);
         }
     }
@@ -200,10 +181,8 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         ->SetBackground(true, std::nullopt, true)
         ->BuildUI(get_transform());
 
-        /// Diagnostic only: inspect loaded font assets and the actual fonts used by
-        /// the translated GameTweaker labels.
-        LogKoreanFontCandidates();
-        LogGameTweakerTextFonts();
+        /// Apply the embedded Korean-capable font only to this settings view.
+        ApplyKoreanFontToView(get_transform());
 
         /// Diagnostic: do not call OnSettingChanged() during view creation.
         /// This avoids re-applying patches while BS+/CP_SDK is attaching the new view.
