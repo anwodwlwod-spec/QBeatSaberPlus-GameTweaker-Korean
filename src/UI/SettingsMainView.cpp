@@ -106,7 +106,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 l_TextMessage += l_Value;
                 Logger::Instance->Info(l_TextMessage);
 
-                auto* l_Font = l_Text->get_font();
+                auto l_Font = l_Text->get_font();
                 if (!l_Font)
                 {
                     Logger::Instance->Info(u"[KoreanTextFontDiag] Font: <null>");
