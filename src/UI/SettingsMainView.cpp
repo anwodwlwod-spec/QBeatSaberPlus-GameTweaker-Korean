@@ -57,7 +57,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 return nullptr;
             }
 
-            s_KoreanFontBundle = s_LoadFromMemory(IncludedAssets::QuestFonts_bundle.Raw(), 0);
+            s_KoreanFontBundle = s_LoadFromMemory(Assets::QuestFonts_bundle.Raw(), 0);
             if (!s_KoreanFontBundle)
             {
                 Logger::Instance->Error(u"[KoreanFont] Failed to load QuestFonts.bundle.");
@@ -117,7 +117,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 if (!l_Text)
                     continue;
 
-                auto* l_Transform = l_Text->get_transform();
+                auto l_Transform = l_Text->get_transform();
                 if (!l_Transform)
                     continue;
 
