@@ -3,166 +3,15 @@
 #include "GameTweaker.hpp"
 #include "GTConfig.hpp"
 #include "Logger.hpp"
-#include "assets.hpp"
 
 #include <CP_SDK/UI/ValueFormatters.hpp>
 #include <CP_SDK/Unity/Extensions/ColorU.hpp>
-
-#include <TMPro/TMP_FontAsset.hpp>
-#include <TMPro/TMP_Text.hpp>
-#include <UnityEngine/AssetBundle.hpp>
-#include <UnityEngine/Object.hpp>
-#include <UnityEngine/Resources.hpp>
-#include <UnityEngine/Transform.hpp>
-#include <beatsaber-hook/shared/utils/il2cpp-functions.hpp>
 
 using namespace CP_SDK::Unity::Extensions;
 using namespace CP_SDK::XUI;
 using namespace UnityEngine;
 
 namespace QBeatSaberPlus_GameTweaker::UI {
-
-    static UnityEngine::AssetBundle* s_KoreanFontBundle = nullptr;
-    static TMPro::TMP_FontAsset* s_KoreanFont = nullptr;
-
-    /// @brief Return true when the font directly contains every Korean glyph that
-    ///        was previously rendered at a smaller fallback size.
-    static bool SupportsProblematicKoreanGlyphs(TMPro::TMP_FontAsset* p_Font)
-    {
-        return p_Font
-            && p_Font->HasCharacter(u'룹', false, false)
-            && p_Font->HasCharacter(u'콤', false, false)
-            && p_Font->HasCharacter(u'밝', false, false)
-            && p_Font->HasCharacter(u'홍', false, false)
-            && p_Font->HasCharacter(u'죽', false, false);
-    }
-
-    /// @brief Load the CP_SDK font AssetBundle embedded in this mod.
-    static TMPro::TMP_FontAsset* LoadKoreanFont()
-    {
-        if (s_KoreanFont)
-            return s_KoreanFont;
-
-        try
-        {
-            using t_LoadFromMemory = UnityEngine::AssetBundle* (*)(::Array<uint8_t>*, unsigned int);
-
-            static auto s_LoadFromMemory = reinterpret_cast<t_LoadFromMemory>(
-                il2cpp_functions::resolve_icall("UnityEngine.AssetBundle::LoadFromMemory_Internal")
-            );
-
-            if (!s_LoadFromMemory)
-            {
-                Logger::Instance->Error(u"[KoreanFont] AssetBundle LoadFromMemory icall was not found.");
-                return nullptr;
-            }
-
-            s_KoreanFontBundle = s_LoadFromMemory(IncludedAssets::QuestFonts_bundle.Raw(), 0);
-            if (!s_KoreanFontBundle)
-            {
-                Logger::Instance->Error(u"[KoreanFont] Failed to load QuestFonts.bundle.");
-                return nullptr;
-            }
-
-            UnityEngine::Object::DontDestroyOnLoad(s_KoreanFontBundle);
-
-            auto* l_MainFont = s_KoreanFontBundle->LoadAsset<TMPro::TMP_FontAsset*>(
-                u"[CP_SDK]segoeui SDF Main"
-            );
-            auto* l_ChatFont = s_KoreanFontBundle->LoadAsset<TMPro::TMP_FontAsset*>(
-                u"[CP_SDK]segoeui SDF"
-            );
-
-            if (SupportsProblematicKoreanGlyphs(l_MainFont))
-                s_KoreanFont = l_MainFont;
-            else if (SupportsProblematicKoreanGlyphs(l_ChatFont))
-                s_KoreanFont = l_ChatFont;
-            else
-            {
-                Logger::Instance->Error(
-                    u"[KoreanFont] QuestFonts.bundle loaded, but neither bundled font contains all required Korean glyphs."
-                );
-                return nullptr;
-            }
-
-            UnityEngine::Object::DontDestroyOnLoad(s_KoreanFont);
-            std::u16string l_Message = u"[KoreanFont] Loaded font: ";
-            l_Message += s_KoreanFont->get_name();
-            Logger::Instance->Info(l_Message);
-
-            return s_KoreanFont;
-        }
-        catch (const std::exception& l_Exception)
-        {
-            Logger::Instance->Error(u"[KoreanFont] Font loading failed:");
-            Logger::Instance->Error(l_Exception);
-            return nullptr;
-        }
-    }
-
-    /// @brief Apply the bundled font only to TMP texts belonging to this view.
-    static void ApplyKoreanFontToView(UnityEngine::Transform* p_ViewTransform)
-    {
-        auto* l_Font = LoadKoreanFont();
-        if (!l_Font || !p_ViewTransform)
-            return;
-
-        try
-        {
-            auto l_Texts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_Text*>();
-            int l_AppliedCount = 0;
-
-            for (auto& l_Text : l_Texts)
-            {
-                if (!l_Text)
-                    continue;
-
-                const std::u16string l_Value = l_Text->get_text();
-                const bool l_IsGameTweakerText =
-                    l_Value == u"게임 트위커 | 설정" ||
-                    l_Value == u"파티클" ||
-                    l_Value == u"환경" ||
-                    l_Value == u"곡 선택" ||
-                    l_Value == u"플레이어 설정" ||
-                    l_Value == u"메인 메뉴" ||
-                    l_Value == u"모든 노트 파편 생성 제거" ||
-                    l_Value == u"환경 파티클 제거" ||
-                    l_Value == u"바닥 화염 파티클 제거" ||
-                    l_Value == u"노트 절단 파티클 제거" ||
-                    l_Value == u"바닥 베기 자국 제거" ||
-                    l_Value == u"장애물 파티클 제거" ||
-                    l_Value == u"세이버 충돌 효과 제거" ||
-                    l_Value == u"환경의 음악 그룹 로고 제거 (BTS, Linkin Park 등)" ||
-                    l_Value == u"풀 콤보 실패 애니메이션 제거" ||
-                    l_Value == u"플레이한 곡 색상" ||
-                    l_Value == u"플레이한 곡 강조" ||
-                    l_Value == u"모든 난이도 플레이 완료 색상" ||
-                    l_Value == u"기본 게임 필터 제거" ||
-                    l_Value == u"플레이어 설정 메뉴 개선" ||
-                    l_Value == u"조명 밝기 재정의 옵션 추가" ||
-                    l_Value == u"조명 효과 필터 옵션 통합" ||
-                    l_Value == u"메뉴 환경 색상 재정의" ||
-                    l_Value == u"기본 색상" ||
-                    l_Value == u"새 콘텐츠 홍보 제거" ||
-                    l_Value == u"레벨 성공 색상" ||
-                    l_Value == u"레벨 실패 색상" ||
-                    l_Value == u"폭죽 비활성화";
-
-                if (!l_IsGameTweakerText)
-                    continue;
-
-                l_Text->set_font(l_Font);
-                ++l_AppliedCount;
-            }
-
-            Logger::Instance->Info(u"[KoreanFont] Applied bundled font to GameTweaker view texts.");
-        }
-        catch (const std::exception& l_Exception)
-        {
-            Logger::Instance->Error(u"[KoreanFont] Applying font to GameTweaker view failed:");
-            Logger::Instance->Error(l_Exception);
-        }
-    }
 
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -193,14 +42,14 @@ namespace QBeatSaberPlus_GameTweaker::UI {
     void SettingsMainView::OnViewCreation_Impl()
     {
         Templates::FullRectLayoutMainView({
-            Templates::TitleBar(u"게임 트위커 | 설정"),
+            Templates::TitleBar(u"Game Tweaker | Settings"),
 
             XUITabControl::Make({
-                {u"파티클",       BuildParticlesTab()},
-                {u"환경",     BuildEnvironmentTab()},
-                {u"곡 선택",  BuildLevelSelectionTab()},
-                {u"플레이어 설정",   BuildPlayerOptionsTab()},
-                {u"메인 메뉴",        BuildMainMenuTab()}
+                {u"Particles",       BuildParticlesTab()},
+                {u"Environment",     BuildEnvironmentTab()},
+                {u"LevelSelection",  BuildLevelSelectionTab()},
+                {u"PlayerOptions",   BuildPlayerOptionsTab()},
+                {u"MainMenu",        BuildMainMenuTab()}
             })
             ->Bind(&m_TabControl)
             ->AsShared()
@@ -208,12 +57,8 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         ->SetBackground(true, std::nullopt, true)
         ->BuildUI(get_transform());
 
-        /// Apply the embedded Korean-capable font only to this settings view.
-        ApplyKoreanFontToView(get_transform());
-
-        /// Diagnostic: do not call OnSettingChanged() during view creation.
-        /// This avoids re-applying patches while BS+/CP_SDK is attaching the new view.
-        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged during view creation");
+        /// Refresh UI
+        OnSettingChanged();
     }
     /// @brief On view deactivation
     void SettingsMainView::OnViewDeactivation_Impl()
@@ -231,14 +76,14 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         auto l_Config = GTConfig::Instance();
 
         return XUIVLayout::Make({
-            XUIText::Make(u"모든 노트 파편 생성 제거")->AsShared(),
+            XUIText::Make(u"Remove all debris spawn")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->RemoveDebris)->Bind(&m_ParticlesTab_RemoveDebris)->OnValueChanged([this](bool) { OnSettingChanged(); })->AsShared(),
 
             XUIHLayout::Make({
                 XUIVLayout::Make({
-                    XUIText::Make(u"환경 파티클 제거")->AsShared(),
+                    XUIText::Make(u"Remove world particles")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->RemoveWorldParticles)->Bind(&m_ParticlesTab_RemoveWorldParticles)->AsShared(),
-                    XUIText::Make(u"바닥 화염 파티클 제거")->AsShared(),
+                    XUIText::Make(u"Remove floor burn particles")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->RemoveSaberBurnMarkSparkles)->Bind(&m_ParticlesTab_RemoveFloorBurnMarkParticles)->AsShared()
                 })
                 ->SetPadding(0)
@@ -247,9 +92,9 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 ->AsShared(),
 
                 XUIVLayout::Make({
-                    XUIText::Make(u"노트 절단 파티클 제거")->AsShared(),
+                    XUIText::Make(u"Remove cut particles")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->RemoveAllCutParticles)->Bind(&m_ParticlesTab_RemoveCutParticles)->AsShared(),
-                    XUIText::Make(u"바닥 베기 자국 제거")->AsShared(),
+                    XUIText::Make(u"Remove floor burn marks")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->RemoveSaberBurnMarks)->Bind(&m_ParticlesTab_RemoveFloorBurnMarkEffects)->AsShared()
                 })
                 ->SetPadding(0)
@@ -258,9 +103,9 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 ->AsShared(),
 
                 XUIVLayout::Make({
-                    XUIText::Make(u"장애물 파티클 제거")->AsShared(),
+                    XUIText::Make(u"Remove obstacle particles")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->RemoveObstacleParticles)->Bind(&m_ParticlesTab_RemoveObstacleParticles)->AsShared(),
-                    XUIText::Make(u"세이버 충돌 효과 제거")->AsShared(),
+                    XUIText::Make(u"Remove saber clash effect")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->RemoveSaberClashEffects)->Bind(&m_ParticlesTab_RemoveSaberClashEffects)->AsShared()
                 })
                 ->SetPadding(0)
@@ -277,10 +122,10 @@ namespace QBeatSaberPlus_GameTweaker::UI {
     {
         auto& l_Config = GTConfig::Instance()->Environment;
         return XUIVLayout::Make({
-            XUIText::Make(u"환경의 음악 그룹 로고 제거 (BTS, Linkin Park 등)")->AsShared(),
+            XUIText::Make(u"Remove music group logos (BTS, LinkinPark...) in environments")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->RemoveMusicBandLogo)->Bind(&m_EnvironmentTab_RemoveMusicBandLogo)->AsShared(),
 
-            XUIText::Make(u"풀 콤보 실패 애니메이션 제거")->AsShared(),
+            XUIText::Make(u"Remove full combo loss animation")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->RemoveFullComboLossAnimation)->Bind(&m_EnvironmentTab_RemoveFullComboLossAnimation)->AsShared()
         })
         ->ForEachDirect<XUIToggle>([this](XUIToggle* x) -> void {
@@ -296,7 +141,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         return XUIVLayout::Make({
             XUIHLayout::Make({
                 XUIVLayout::Make({
-                    XUIText::Make(u"플레이한 곡 색상")->AsShared(),
+                    XUIText::Make(u"Played color")->AsShared(),
                     XUIColorInput::Make()->SetValue(ColorU::Convert(l_Config->HighlightPlayed))->Bind(&m_LevelSelectionTab_HighlightPlayedSongColor)->AsShared()
                 })
                 ->SetPadding(0)
@@ -305,7 +150,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 ->AsShared(),
 
                 XUIVLayout::Make({
-                    XUIText::Make(u"플레이한 곡 강조")->AsShared(),
+                    XUIText::Make(u"Highlight played song")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->HighlightEnabled)->Bind(&m_LevelSelectionTab_HighlightPlayedSong)->AsShared()
                 })
                 ->SetPadding(0)
@@ -314,7 +159,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 ->AsShared(),
 
                 XUIVLayout::Make({
-                    XUIText::Make(u"모든 난이도 플레이 완료 색상")->AsShared(),
+                    XUIText::Make(u"All played color")->AsShared(),
                     XUIColorInput::Make()->SetValue(ColorU::Convert(l_Config->HighlightAllPlayed))->Bind(&m_LevelSelectionTab_HighlightPlayedSongAllColor)->AsShared()
                 })
                 ->SetPadding(0)
@@ -325,7 +170,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
             ->SetPadding(0)
             ->AsShared(),
 
-            XUIText::Make(u"기본 게임 필터 제거")->AsShared(),
+            XUIText::Make(u"Remove base game filter")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->RemoveBaseGameFilterButton)->Bind(&m_LevelSelectionTab_RemoveBaseGameFilterButton)->AsShared()
         })
         ->ForEachDirect<XUIToggle>([this](XUIToggle* x) { x->OnValueChanged([this](bool) { OnSettingChanged(); }); })
@@ -337,13 +182,13 @@ namespace QBeatSaberPlus_GameTweaker::UI {
     {
         auto& l_Config = GTConfig::Instance()->PlayerOptions;
         return XUIVLayout::Make({
-            XUIText::Make(u"플레이어 설정 메뉴 개선")->AsShared(),
+            XUIText::Make(u"Better player options menu")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->ReorderPlayerSettings)->Bind(&m_PlayerOptionsTab_ReorderPlayerSettings)->AsShared(),
 
-            XUIText::Make(u"조명 밝기 재정의 옵션 추가")->AsShared(),
+            XUIText::Make(u"Add override lights intensity option")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->OverrideLightIntensityOption)->Bind(&m_PlayerOptionsTab_AddOverrideLightIntensityOption)->AsShared(),
 
-            XUIText::Make(u"조명 효과 필터 옵션 통합")->AsShared(),
+            XUIText::Make(u"Merge light effect filter options")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->MergeLightPressetOptions)->Bind(&m_PlayerOptionsTab_MergeLightEffectFilterOptions)->AsShared()
 
         })
@@ -358,15 +203,15 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         auto& l_Config = GTConfig::Instance()->MainMenu;
 
         return XUIVLayout::Make({
-            XUIText::Make(u"메뉴 환경 색상 재정의")->AsShared(),
+            XUIText::Make(u"Override menu environment colors")->AsShared(),
             XUIToggle::Make()->SetValue(l_Config->OverrideMenuEnvColors)->Bind(&m_MainMenuTab_OverrideMenuEnvColors)->OnValueChanged([this](bool) { OnSettingChangedOverrideMenuColor(); })->AsShared(),
 
             XUIHLayout::Make({
                 XUIVLayout::Make({
-                    XUIText::Make(u"기본 색상")->AsShared(),
+                    XUIText::Make(u"Base color")->AsShared(),
                     XUIColorInput::Make()->SetValue(l_Config->BaseColor)->Bind(&m_MainMenuTab_BaseColor)->AsShared(),
 
-                    XUIText::Make(u"새 콘텐츠 홍보 제거")->SetAlign(TMPro::TextAlignmentOptions::CenterGeoAligned)->AsShared(),
+                    XUIText::Make(u"Remove new content promo")->SetAlign(TMPro::TextAlignmentOptions::CenterGeoAligned)->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->RemoveNewContentPromotional)->Bind(&m_MainMenuTab_RemoveNewContentPromotional)->OnValueChanged([this](bool) { OnSettingChanged(); })->AsShared()
                 })
                 ->SetPadding(0)
@@ -375,7 +220,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 ->AsShared(),
 
                 XUIVLayout::Make({
-                    XUIText::Make(u"레벨 성공 색상")->AsShared(),
+                    XUIText::Make(u"Level cleared color")->AsShared(),
                     XUIColorInput::Make()->SetValue(l_Config->LevelClearedColor)->Bind(&m_MainMenuTab_LevelClearedColor)->AsShared(),
 
                     XUIText::Make(u" ")->AsShared(),
@@ -387,10 +232,10 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 ->AsShared(),
 
                 XUIVLayout::Make({
-                    XUIText::Make(u"레벨 실패 색상")->AsShared(),
+                    XUIText::Make(u"Level failed color")->AsShared(),
                     XUIColorInput::Make()->SetValue(l_Config->LevelFailedColor)->Bind(&m_MainMenuTab_LevelFailedColor)->AsShared(),
 
-                    XUIText::Make(u"폭죽 비활성화")->AsShared(),
+                    XUIText::Make(u"Disable fireworks")->AsShared(),
                     XUIToggle::Make()->SetValue(l_Config->DisableFireworks)->Bind(&m_MainMenuTab_DisableFireworks)->OnValueChanged([this](bool) { OnSettingChanged(); })->AsShared()
                 })
                 ->SetPadding(0)
@@ -531,9 +376,8 @@ namespace QBeatSaberPlus_GameTweaker::UI {
 
         m_PreventChanges = false;
 
-        /// Diagnostic: do not call OnSettingChanged() immediately after refresh.
-        /// This prevents a second patch application during UI reactivation.
-        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged after RefreshSettings");
+        /// Refresh UI
+        OnSettingChanged();
     }
 
 }   ///< namespace QBeatSaberPlus_GameTweaker::UI
