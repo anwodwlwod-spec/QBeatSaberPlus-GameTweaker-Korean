@@ -57,7 +57,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 return nullptr;
             }
 
-            s_KoreanFontBundle = s_LoadFromMemory(Assets::QuestFonts_bundle.Raw(), 0);
+            s_KoreanFontBundle = s_LoadFromMemory(IncludedAssets::QuestFonts_bundle.Raw(), 0);
             if (!s_KoreanFontBundle)
             {
                 Logger::Instance->Error(u"[KoreanFont] Failed to load QuestFonts.bundle.");
@@ -117,11 +117,38 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 if (!l_Text)
                     continue;
 
-                auto l_Transform = l_Text->get_transform();
-                if (!l_Transform)
-                    continue;
+                const std::u16string l_Value = l_Text->get_text();
+                const bool l_IsGameTweakerText =
+                    l_Value == u"게임 트위커 | 설정" ||
+                    l_Value == u"파티클" ||
+                    l_Value == u"환경" ||
+                    l_Value == u"곡 선택" ||
+                    l_Value == u"플레이어 설정" ||
+                    l_Value == u"메인 메뉴" ||
+                    l_Value == u"모든 노트 파편 생성 제거" ||
+                    l_Value == u"환경 파티클 제거" ||
+                    l_Value == u"바닥 화염 파티클 제거" ||
+                    l_Value == u"노트 절단 파티클 제거" ||
+                    l_Value == u"바닥 베기 자국 제거" ||
+                    l_Value == u"장애물 파티클 제거" ||
+                    l_Value == u"세이버 충돌 효과 제거" ||
+                    l_Value == u"환경의 음악 그룹 로고 제거 (BTS, Linkin Park 등)" ||
+                    l_Value == u"풀 콤보 실패 애니메이션 제거" ||
+                    l_Value == u"플레이한 곡 색상" ||
+                    l_Value == u"플레이한 곡 강조" ||
+                    l_Value == u"모든 난이도 플레이 완료 색상" ||
+                    l_Value == u"기본 게임 필터 제거" ||
+                    l_Value == u"플레이어 설정 메뉴 개선" ||
+                    l_Value == u"조명 밝기 재정의 옵션 추가" ||
+                    l_Value == u"조명 효과 필터 옵션 통합" ||
+                    l_Value == u"메뉴 환경 색상 재정의" ||
+                    l_Value == u"기본 색상" ||
+                    l_Value == u"새 콘텐츠 홍보 제거" ||
+                    l_Value == u"레벨 성공 색상" ||
+                    l_Value == u"레벨 실패 색상" ||
+                    l_Value == u"폭죽 비활성화";
 
-                if (l_Transform != p_ViewTransform && !l_Transform->IsChildOf(p_ViewTransform))
+                if (!l_IsGameTweakerText)
                     continue;
 
                 l_Text->set_font(l_Font);
