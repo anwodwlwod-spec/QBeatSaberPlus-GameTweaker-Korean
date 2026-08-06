@@ -104,7 +104,7 @@ target_include_directories(${COMPILE_ID} PUBLIC ${SHARED_DIR})
 target_include_directories(${COMPILE_ID} PRIVATE ${EXTERN_DIR}/includes/chatplex-sdk-bs/shared)
 
 # Embed assets/QuestFonts.bundle and link the generated static asset library
-add_assets(${COMPILE_ID}-assets STATIC ${CMAKE_CURRENT_LIST_DIR}/assets ${INCLUDE_DIR}/assets.hpp)
+add_assets(${COMPILE_ID}-assets STATIC ${CMAKE_CURRENT_LIST_DIR}/assets ${INCLUDE_DIR}/embedded_assets_generated.hpp)
 target_link_libraries(${COMPILE_ID} PRIVATE -llog -lz ${COMPILE_ID}-assets)
 
 # add extern stuff like libs and other includes
