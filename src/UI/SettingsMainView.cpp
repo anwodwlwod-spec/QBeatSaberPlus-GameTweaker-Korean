@@ -8,6 +8,7 @@
 #include <CP_SDK/Unity/Extensions/ColorU.hpp>
 
 #include <TMPro/TMP_FontAsset.hpp>
+#include <TMPro/TMP_Text.hpp>
 #include <UnityEngine/Resources.hpp>
 
 using namespace CP_SDK::Unity::Extensions;
@@ -66,6 +67,95 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         }
     }
 
+    /// @brief Log the actual TMP font used by the translated GameTweaker labels.
+    ///        Only texts containing the known problematic Korean words are logged,
+    ///        so the Paperlog remains small and easy to inspect.
+    static void LogGameTweakerTextFonts()
+    {
+        static bool s_HasRun = false;
+        if (s_HasRun)
+            return;
+        s_HasRun = true;
+
+        try
+        {
+            auto l_Texts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_Text*>();
+            int l_Matches = 0;
+
+            Logger::Instance->Info(u"[KoreanTextFontDiag] Scanning actual TMP_Text components...");
+
+            for (auto& l_Text : l_Texts)
+            {
+                if (!l_Text)
+                    continue;
+
+                std::u16string l_Value = l_Text->get_text();
+                const bool l_IsTarget =
+                    l_Value.find(u"그룹") != std::u16string::npos ||
+                    l_Value.find(u"콤보") != std::u16string::npos ||
+                    l_Value.find(u"밝기") != std::u16string::npos ||
+                    l_Value.find(u"홍보") != std::u16string::npos ||
+                    l_Value.find(u"폭죽") != std::u16string::npos;
+
+                if (!l_IsTarget)
+                    continue;
+
+                ++l_Matches;
+
+                std::u16string l_TextMessage = u"[KoreanTextFontDiag] Text: ";
+                l_TextMessage += l_Value;
+                Logger::Instance->Info(l_TextMessage);
+
+                auto* l_Font = l_Text->get_font();
+                if (!l_Font)
+                {
+                    Logger::Instance->Info(u"[KoreanTextFontDiag] Font: <null>");
+                    continue;
+                }
+
+                std::u16string l_FontMessage = u"[KoreanTextFontDiag] Font: ";
+                l_FontMessage += l_Font->get_name();
+                Logger::Instance->Info(l_FontMessage);
+
+                Logger::Instance->Info(
+                    l_Font->HasCharacter(u'룹', false, false)
+                        ? u"[KoreanTextFontDiag] Has 룹: true"
+                        : u"[KoreanTextFontDiag] Has 룹: false"
+                );
+                Logger::Instance->Info(
+                    l_Font->HasCharacter(u'콤', false, false)
+                        ? u"[KoreanTextFontDiag] Has 콤: true"
+                        : u"[KoreanTextFontDiag] Has 콤: false"
+                );
+                Logger::Instance->Info(
+                    l_Font->HasCharacter(u'밝', false, false)
+                        ? u"[KoreanTextFontDiag] Has 밝: true"
+                        : u"[KoreanTextFontDiag] Has 밝: false"
+                );
+                Logger::Instance->Info(
+                    l_Font->HasCharacter(u'홍', false, false)
+                        ? u"[KoreanTextFontDiag] Has 홍: true"
+                        : u"[KoreanTextFontDiag] Has 홍: false"
+                );
+                Logger::Instance->Info(
+                    l_Font->HasCharacter(u'죽', false, false)
+                        ? u"[KoreanTextFontDiag] Has 죽: true"
+                        : u"[KoreanTextFontDiag] Has 죽: false"
+                );
+            }
+
+            if (l_Matches == 0)
+                Logger::Instance->Info(u"[KoreanTextFontDiag] No target GameTweaker texts were found.");
+            else
+                Logger::Instance->Info(u"[KoreanTextFontDiag] Scan complete.");
+        }
+        catch (const std::exception& l_Exception)
+        {
+            Logger::Instance->Error(u"[KoreanTextFontDiag] Text font scan failed:");
+            Logger::Instance->Error(l_Exception);
+        }
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
@@ -110,8 +200,10 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         ->SetBackground(true, std::nullopt, true)
         ->BuildUI(get_transform());
 
-        /// Diagnostic only: list loaded fonts that fully support the problematic Korean glyphs.
+        /// Diagnostic only: inspect loaded font assets and the actual fonts used by
+        /// the translated GameTweaker labels.
         LogKoreanFontCandidates();
+        LogGameTweakerTextFonts();
 
         /// Diagnostic: do not call OnSettingChanged() during view creation.
         /// This avoids re-applying patches while BS+/CP_SDK is attaching the new view.
