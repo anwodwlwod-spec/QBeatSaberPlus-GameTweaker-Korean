@@ -140,6 +140,66 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         }
     }
 
+    /// @brief List every loaded TMP font asset that directly contains each test glyph.
+    ///        This identifies the real loaded source font without relying on
+    ///        TMP_FontAssetUtilities overload signatures.
+    static void LogKoreanGlyphSourceFonts()
+    {
+        static bool s_HasRun = false;
+        if (s_HasRun)
+            return;
+        s_HasRun = true;
+
+        try
+        {
+            auto l_Fonts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_FontAsset*>();
+
+            const char16_t l_Chars[] = {
+                u'환', u'경', u'음', u'악', u'제', u'거',
+                u'룹', u'콤', u'밝', u'홍', u'죽'
+            };
+
+            Logger::Instance->Info(u"[KoreanGlyphSource] Scanning loaded TMP font assets per glyph...");
+
+            for (char16_t l_Char : l_Chars)
+            {
+                bool l_Found = false;
+
+                for (auto& l_Font : l_Fonts)
+                {
+                    if (!l_Font)
+                        continue;
+
+                    if (!l_Font->HasCharacter(l_Char, false, false))
+                        continue;
+
+                    l_Found = true;
+
+                    std::u16string l_Message = u"[KoreanGlyphSource] ";
+                    l_Message += l_Char;
+                    l_Message += u" -> ";
+                    l_Message += l_Font->get_name();
+                    Logger::Instance->Info(l_Message);
+                }
+
+                if (!l_Found)
+                {
+                    std::u16string l_Message = u"[KoreanGlyphSource] ";
+                    l_Message += l_Char;
+                    l_Message += u" -> <no loaded TMP font asset>";
+                    Logger::Instance->Info(l_Message);
+                }
+            }
+
+            Logger::Instance->Info(u"[KoreanGlyphSource] Scan complete.");
+        }
+        catch (const std::exception& l_Exception)
+        {
+            Logger::Instance->Error(u"[KoreanGlyphSource] Scan failed:");
+            Logger::Instance->Error(l_Exception);
+        }
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
@@ -187,6 +247,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         /// Diagnostics only. These calls do not change the UI font.
         LogKoreanFontCandidates();
         LogKoreanGlyphResolution();
+        LogKoreanGlyphSourceFonts();
 
         /// Diagnostic: do not call OnSettingChanged() during view creation.
         /// This avoids re-applying patches while BS+/CP_SDK is attaching the new view.
