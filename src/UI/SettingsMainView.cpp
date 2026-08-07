@@ -207,6 +207,74 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         return std::u16string(l_Value.begin(), l_Value.end());
     }
 
+    /// @brief Inspect Quest / Android OS fonts without changing any TMP font asset.
+    static void LogQuestOSKoreanFonts()
+    {
+        static bool s_HasRun = false;
+        if (s_HasRun)
+            return;
+        s_HasRun = true;
+
+        try
+        {
+            Logger::Instance->Info(u"[OSFontDiag] ===== Quest OS font scan start =====");
+            auto l_Names = UnityEngine::Font::GetOSInstalledFontNames();
+
+            std::u16string l_Count = u"[OSFontDiag] Installed font names=";
+            l_Count += ToU16Number(static_cast<std::size_t>(l_Names.size()));
+            Logger::Instance->Info(l_Count);
+
+            int l_Candidates = 0;
+            for (auto l_Name : l_Names)
+            {
+                auto l_Font = UnityEngine::Font::CreateDynamicFontFromOSFont(l_Name, 48);
+                if (!l_Font)
+                    continue;
+
+                const bool l_Group = l_Font->HasCharacter(u'룹');
+                const bool l_Combo = l_Font->HasCharacter(u'콤');
+                const bool l_Bright = l_Font->HasCharacter(u'밝');
+                const bool l_Promo = l_Font->HasCharacter(u'홍');
+                const bool l_Firework = l_Font->HasCharacter(u'죽');
+
+                if (!(l_Group || l_Combo || l_Bright || l_Promo || l_Firework))
+                    continue;
+
+                std::u16string l_Message = u"[OSFontDiag] Font=";
+                l_Message += l_Name;
+                l_Message += u" | 룹=";
+                l_Message += l_Group ? u"1" : u"0";
+                l_Message += u" 콤=";
+                l_Message += l_Combo ? u"1" : u"0";
+                l_Message += u" 밝=";
+                l_Message += l_Bright ? u"1" : u"0";
+                l_Message += u" 홍=";
+                l_Message += l_Promo ? u"1" : u"0";
+                l_Message += u" 죽=";
+                l_Message += l_Firework ? u"1" : u"0";
+                Logger::Instance->Info(l_Message);
+
+                if (l_Group && l_Combo && l_Bright && l_Promo && l_Firework)
+                {
+                    ++l_Candidates;
+                    std::u16string l_Full = u"[OSFontDiag] FULL_CANDIDATE=";
+                    l_Full += l_Name;
+                    Logger::Instance->Info(l_Full);
+                }
+            }
+
+            std::u16string l_End = u"[OSFontDiag] Full candidates=";
+            l_End += ToU16Number(static_cast<std::size_t>(l_Candidates));
+            Logger::Instance->Info(l_End);
+            Logger::Instance->Info(u"[OSFontDiag] ===== Quest OS font scan end =====");
+        }
+        catch (const std::exception& l_Exception)
+        {
+            Logger::Instance->Error(u"[OSFontDiag] Scan failed:");
+            Logger::Instance->Error(l_Exception);
+        }
+    }
+
     /// @brief Try to extend the already-loaded NotoSansKR TMP font at runtime
     ///        with the Korean syllables that currently fall through to unicode sprites.
     ///        No AssetBundle / CMake changes are required.
@@ -242,9 +310,9 @@ namespace QBeatSaberPlus_GameTweaker::UI {
 
             auto l_SourceFont = l_KoreanFont->get_sourceFontFile();
 
-std::u16string l_Info = u"[KoreanFontExtend] Found NotoSansKR-Medium SDF | sourceFont=";
-l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
-Logger::Instance->Info(l_Info);
+            std::u16string l_Info = u"[KoreanFontExtend] Found NotoSansKR-Medium SDF | sourceFont=";
+            l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
+            Logger::Instance->Info(l_Info);
 
             Logger::Instance->Info(u"[NotoDump] ===== Font Details =====");
 
@@ -349,6 +417,7 @@ Logger::Instance->Info(l_Info);
         ->BuildUI(get_transform());
 
         /// Diagnostics only. These calls do not change the UI font.
+        LogQuestOSKoreanFonts();
         LogKoreanFontCandidates();
         LogKoreanGlyphResolution();
         LogKoreanGlyphSourceFonts();
