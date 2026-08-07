@@ -6,53 +6,30 @@
 #define AtlasPopulationMode_Unwrapped __AtlasPopulationMode_Unwrapped
 
 // Font-debug experiment:
-// NDK #66 confirmed that TMP_FontAsset::CreateFontAsset() still returns null
-// when its source is the Unity Font created by CreateDynamicFontFromOSFont().
-// Unity's TMP guidance recommends using a file-backed Font for runtime asset
-// creation, so try Quest/Android's CJK font file directly first.
+// NDK/test #67 proved that UnityEngine::Font can be created successfully from
+// Quest's /system/fonts/NotoSansCJK-Regular.ttc, but TMP_FontAsset::CreateFontAsset
+// still throws because the generated wrapper selects the wrong overload.
 //
-// This macro intentionally relies on the local variable name l_KoreanFont in
-// TryExtendLoadedKoreanFont(); it is isolated to this diagnostic branch/TU.
+// For test #68, skip creation of a second TMP asset entirely. Feed the
+// file-backed Unity Font directly into the already loaded NotoSansKR-Medium SDF.
+// The existing TryExtendLoadedKoreanFont() code will then switch that asset to
+// Dynamic and call TryAddCharacters(), so success is simply 600 -> 606.
+//
+// This macro intentionally replaces only set_sourceFontFile() in this TU.
 #define set_sourceFontFile(value) \
-    set_sourceFontFile(value); \
     do { \
-        Logger::Instance->Info(u"[KoreanDynamicFallback] Trying file-backed Quest CJK font..."); \
+        Logger::Instance->Info(u"[KoreanDirectSource] Trying file-backed source on existing NotoSansKR asset..."); \
         ::UnityEngine::Font* __gt_source = nullptr; \
         try { \
             __gt_source = ::UnityEngine::Font::New_ctor(u"/system/fonts/NotoSansCJK-Regular.ttc"); \
             Logger::Instance->Info(__gt_source \
-                ? u"[KoreanDynamicFallback] File-backed Unity Font created." \
-                : u"[KoreanDynamicFallback] File-backed Unity Font is null."); \
+                ? u"[KoreanDirectSource] File-backed Unity Font created; attaching to existing asset." \
+                : u"[KoreanDirectSource] File-backed Unity Font is null; using original source value."); \
         } catch (...) { \
-            Logger::Instance->Info(u"[KoreanDynamicFallback] File-backed Unity Font creation threw."); \
+            Logger::Instance->Info(u"[KoreanDirectSource] File-backed Unity Font creation threw; using original source value."); \
         } \
-        if (!__gt_source) \
-            __gt_source = static_cast<::UnityEngine::Font*>(value); \
-        auto __gt_dynamic = ::TMPro::TMP_FontAsset::CreateFontAsset( \
-            __gt_source, \
-            90, \
-            l_KoreanFont->get_atlasPadding(), \
-            l_KoreanFont->get_atlasRenderMode(), \
-            l_KoreanFont->get_atlasWidth(), \
-            l_KoreanFont->get_atlasHeight(), \
-            ::TMPro::AtlasPopulationMode(::TMPro::AtlasPopulationMode::Dynamic), \
-            true); \
-        if (__gt_dynamic) { \
-            Logger::Instance->Info(u"[KoreanDynamicFallback] File-backed CreateFontAsset succeeded."); \
-            __gt_dynamic->set_name(u"GameTweaker-Korean-Dynamic"); \
-            __gt_dynamic->set_isMultiAtlasTexturesEnabled(true); \
-            const bool __gt_added = __gt_dynamic->TryAddCharacters(u"룹콤밝홍죽듈", false); \
-            Logger::Instance->Info(__gt_added \
-                ? u"[KoreanDynamicFallback] TryAddCharacters(룹콤밝홍죽듈)=true" \
-                : u"[KoreanDynamicFallback] TryAddCharacters(룹콤밝홍죽듈)=false"); \
-            auto* __gt_fallbacks = l_KoreanFont->get_fallbackFontAssetTable(); \
-            if (__gt_fallbacks) { \
-                __gt_fallbacks->Add(__gt_dynamic); \
-                Logger::Instance->Info(u"[KoreanDynamicFallback] Added to NotoSansKR fallback table."); \
-            } else { \
-                Logger::Instance->Info(u"[KoreanDynamicFallback] NotoSansKR fallback table is null."); \
-            } \
-        } else { \
-            Logger::Instance->Info(u"[KoreanDynamicFallback] File-backed CreateFontAsset returned null."); \
-        } \
+        if (__gt_source) \
+            set_sourceFontFile(__gt_source); \
+        else \
+            set_sourceFontFile(value); \
     } while (false)
