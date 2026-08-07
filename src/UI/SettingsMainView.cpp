@@ -276,8 +276,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
     }
 
     /// @brief Try to extend the already-loaded NotoSansKR TMP font at runtime
-    ///        with the Korean syllables that currently fall through to unicode sprites.
-    ///        No AssetBundle / CMake changes are required.
+    ///        by attaching Quest's Noto Sans CJK KR OS font as the source.
     static void TryExtendLoadedKoreanFont()
     {
         static bool s_HasRun = false;
@@ -338,8 +337,20 @@ namespace QBeatSaberPlus_GameTweaker::UI {
 
             if (!l_SourceFont)
             {
-                Logger::Instance->Info(u"[KoreanFontExtend] Source font is null; TryAddCharacters skipped.");
-                return;
+                Logger::Instance->Info(u"[KoreanFontExtend] Creating Quest OS source font: Noto Sans CJK KR");
+                l_SourceFont = UnityEngine::Font::CreateDynamicFontFromOSFont(u"Noto Sans CJK KR", 48);
+
+                if (!l_SourceFont)
+                {
+                    Logger::Instance->Info(u"[KoreanFontExtend] Failed to create Noto Sans CJK KR OS font.");
+                    return;
+                }
+
+                l_KoreanFont->set_sourceFontFile(l_SourceFont);
+
+                std::u16string l_Attached = u"[KoreanFontExtend] Attached source font=";
+                l_Attached += l_SourceFont->get_name();
+                Logger::Instance->Info(l_Attached);
             }
 
             Logger::Instance->Info(u"[KoreanFontExtend] Trying to add: 룹 콤 밝 홍 죽");
