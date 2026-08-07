@@ -241,13 +241,10 @@ namespace QBeatSaberPlus_GameTweaker::UI {
             }
 
             auto l_SourceFont = l_KoreanFont->get_sourceFontFile();
-            const auto l_Mode = l_KoreanFont->get_atlasPopulationMode();
 
-            std::u16string l_Info = u"[KoreanFontExtend] Found NotoSansKR-Medium SDF | mode=";
-            l_Info += ToU16Number(static_cast<std::size_t>(static_cast<::__AtlasPopulationMode_Unwrapped>(l_Mode)));
-            l_Info += u" | sourceFont=";
-            l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
-            Logger::Instance->Info(l_Info);
+std::u16string l_Info = u"[KoreanFontExtend] Found NotoSansKR-Medium SDF | sourceFont=";
+l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
+Logger::Instance->Info(l_Info);
 
             Logger::Instance->Info(u"[NotoDump] ===== Font Details =====");
 
