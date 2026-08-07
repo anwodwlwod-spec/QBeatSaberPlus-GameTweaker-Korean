@@ -1,6 +1,8 @@
 name: Quest OS font runtime diagnostic
 
 on:
+  push:
+    branches: [ chatgpt-font-debug ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -8,9 +10,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      module_id: qbeatsaberplus-gametweaker
-      qmodName: QBeatSaberPlus-GameTweaker
 
     steps:
       - name: Checkout
@@ -69,11 +68,8 @@ jobs:
             Logger::Instance->Info(l_Count);
 
             int l_Candidates = 0;
-            for (auto& l_Name : l_Names)
+            for (auto l_Name : l_Names)
             {
-                if (l_Name.empty())
-                    continue;
-
                 auto l_Font = UnityEngine::Font::CreateDynamicFontFromOSFont(l_Name, 48);
                 if (!l_Font)
                     continue;
