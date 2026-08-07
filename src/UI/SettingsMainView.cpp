@@ -3,6 +3,7 @@
 #include "GameTweaker.hpp"
 #include "GTConfig.hpp"
 #include "Logger.hpp"
+#include <cstdio>
 
 #include <CP_SDK/UI/ValueFormatters.hpp>
 #include <CP_SDK/Unity/Extensions/ColorU.hpp>
@@ -15,6 +16,14 @@ using namespace CP_SDK::XUI;
 using namespace UnityEngine;
 
 namespace QBeatSaberPlus_GameTweaker::UI {
+
+
+    static void CrashTrace(const char16_t* p_Message)
+    {
+        Logger::Instance->Info(p_Message);
+        std::fflush(nullptr);
+    }
+
 
     /// @brief Log loaded TMP fonts that can render the Korean glyphs that were
     ///        visually smaller in the translated UI. This is diagnostic only:
@@ -228,31 +237,46 @@ namespace QBeatSaberPlus_GameTweaker::UI {
     /// @brief On view creation
     void SettingsMainView::OnViewCreation_Impl()
     {
-        Templates::FullRectLayoutMainView({
+        CrashTrace(u"[GT-CrashTrace] 01 OnViewCreation enter");
+
+        CrashTrace(u"[GT-CrashTrace] 02 Before creating UI tree");
+        auto l_MainView = Templates::FullRectLayoutMainView({
             Templates::TitleBar(u"게임 트위커 | 설정"),
 
             XUITabControl::Make({
                 {u"파티클",       BuildParticlesTab()},
-                {u"환경",     BuildEnvironmentTab()},
-                {u"곡 선택",  BuildLevelSelectionTab()},
-                {u"플레이어 설정",   BuildPlayerOptionsTab()},
-                {u"메인 메뉴",        BuildMainMenuTab()}
+                {u"환경",         BuildEnvironmentTab()},
+                {u"곡 선택",      BuildLevelSelectionTab()},
+                {u"플레이어 설정", BuildPlayerOptionsTab()},
+                {u"메인 메뉴",    BuildMainMenuTab()}
             })
             ->Bind(&m_TabControl)
             ->AsShared()
         })
-        ->SetBackground(true, std::nullopt, true)
-        ->BuildUI(get_transform());
+        ->SetBackground(true, std::nullopt, true);
 
-        /// Diagnostics only. These calls do not change the UI font.
+        CrashTrace(u"[GT-CrashTrace] 03 UI tree created");
+        CrashTrace(u"[GT-CrashTrace] 04 Before BuildUI");
+        l_MainView->BuildUI(get_transform());
+        CrashTrace(u"[GT-CrashTrace] 05 After BuildUI");
+
+        CrashTrace(u"[GT-CrashTrace] 06 Before LogKoreanFontCandidates");
         LogKoreanFontCandidates();
-        LogKoreanGlyphResolution();
-        LogKoreanGlyphSourceFonts();
+        CrashTrace(u"[GT-CrashTrace] 07 After LogKoreanFontCandidates");
 
-        /// Diagnostic: do not call OnSettingChanged() during view creation.
-        /// This avoids re-applying patches while BS+/CP_SDK is attaching the new view.
-        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged during view creation");
+        CrashTrace(u"[GT-CrashTrace] 08 Before LogKoreanGlyphResolution");
+        LogKoreanGlyphResolution();
+        CrashTrace(u"[GT-CrashTrace] 09 After LogKoreanGlyphResolution");
+
+        CrashTrace(u"[GT-CrashTrace] 10 Before LogKoreanGlyphSourceFonts");
+        LogKoreanGlyphSourceFonts();
+        CrashTrace(u"[GT-CrashTrace] 11 After LogKoreanGlyphSourceFonts");
+
+        /// Diagnostic: do not call OnSettingChanged() immediately after view creation.
+        CrashTrace(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged during view creation");
+        CrashTrace(u"[GT-CrashTrace] 12 OnViewCreation exit");
     }
+
     /// @brief On view deactivation
     void SettingsMainView::OnViewDeactivation_Impl()
     {
