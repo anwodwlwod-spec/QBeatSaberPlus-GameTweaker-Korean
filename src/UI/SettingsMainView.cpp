@@ -18,267 +18,8 @@ using namespace UnityEngine;
 
 namespace QBeatSaberPlus_GameTweaker::UI {
 
-    /// @brief Log loaded TMP fonts that can render the Korean glyphs that were
-    ///        visually smaller in the translated UI. This is diagnostic only:
-    ///        it does not change any font or affect another mod.
-    static void LogKoreanFontCandidates()
-    {
-        static bool s_HasRun = false;
-        if (s_HasRun)
-            return;
-        s_HasRun = true;
-
-        try
-        {
-            auto l_Fonts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_FontAsset*>();
-            Logger::Instance->Info(u"[KoreanFontDiag] Scanning loaded TMP font assets...");
-
-            int l_Total = 0;
-            int l_Matches = 0;
-            for (auto& l_Font : l_Fonts)
-            {
-                if (!l_Font)
-                    continue;
-
-                ++l_Total;
-                const bool l_Group = l_Font->HasCharacter(u'룹', false, false);
-                const bool l_Combo = l_Font->HasCharacter(u'콤', false, false);
-                const bool l_Bright = l_Font->HasCharacter(u'밝', false, false);
-                const bool l_Promo = l_Font->HasCharacter(u'홍', false, false);
-                const bool l_Firework = l_Font->HasCharacter(u'죽', false, false);
-
-                if (!(l_Group && l_Combo && l_Bright && l_Promo && l_Firework))
-                    continue;
-
-                ++l_Matches;
-                std::u16string l_Message = u"[KoreanFontDiag] Candidate: ";
-                l_Message += l_Font->get_name();
-                Logger::Instance->Info(l_Message);
-            }
-
-            if (l_Matches == 0)
-                Logger::Instance->Info(u"[KoreanFontDiag] Scan complete: no font supports all test glyphs.");
-            else
-                Logger::Instance->Info(u"[KoreanFontDiag] Scan complete: one or more candidates found above.");
-        }
-        catch (const std::exception& l_Exception)
-        {
-            Logger::Instance->Error(u"[KoreanFontDiag] Font scan failed:");
-            Logger::Instance->Error(l_Exception);
-        }
-    }
-
-    /// @brief Compare direct glyph support with TMP fallback-chain support.
-    ///        This preserves the translated UI and all prior crash fixes.
-    static void LogKoreanGlyphResolution()
-    {
-        static bool s_HasRun = false;
-        if (s_HasRun)
-            return;
-        s_HasRun = true;
-
-        try
-        {
-            auto l_Texts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_Text*>();
-            TMPro::TMP_FontAsset* l_Font = nullptr;
-
-            for (auto& l_Text : l_Texts)
-            {
-                if (!l_Text)
-                    continue;
-
-                const std::u16string l_Value = l_Text->get_text();
-                if (l_Value.find(u"환경") == std::u16string::npos
-                    && l_Value.find(u"그룹") == std::u16string::npos
-                    && l_Value.find(u"콤보") == std::u16string::npos
-                    && l_Value.find(u"밝기") == std::u16string::npos
-                    && l_Value.find(u"홍보") == std::u16string::npos
-                    && l_Value.find(u"폭죽") == std::u16string::npos)
-                    continue;
-
-                auto l_CurrentFont = l_Text->get_font();
-                if (l_CurrentFont)
-                {
-                    l_Font = l_CurrentFont;
-                    break;
-                }
-            }
-
-            if (!l_Font)
-            {
-                Logger::Instance->Info(u"[KoreanGlyphDiag] Could not find the GameTweaker TMP font.");
-                return;
-            }
-
-            std::u16string l_FontMessage = u"[KoreanGlyphDiag] Base font: ";
-            l_FontMessage += l_Font->get_name();
-            Logger::Instance->Info(l_FontMessage);
-
-            const char16_t l_Chars[] = {
-                u'환', u'경', u'음', u'악', u'제', u'거',
-                u'룹', u'콤', u'밝', u'홍', u'죽'
-            };
-
-            for (char16_t l_Char : l_Chars)
-            {
-                const bool l_Direct = l_Font->HasCharacter(l_Char, false, false);
-                const bool l_WithFallback = l_Font->HasCharacter(l_Char, true, false);
-
-                std::u16string l_Message = u"[KoreanGlyphDiag] ";
-                l_Message += l_Char;
-                l_Message += u" | direct=";
-                l_Message += l_Direct ? u"true" : u"false";
-                l_Message += u" | fallback=";
-                l_Message += l_WithFallback ? u"true" : u"false";
-                Logger::Instance->Info(l_Message);
-            }
-
-            Logger::Instance->Info(u"[KoreanGlyphDiag] Scan complete.");
-        }
-        catch (const std::exception& l_Exception)
-        {
-            Logger::Instance->Error(u"[KoreanGlyphDiag] Scan failed:");
-            Logger::Instance->Error(l_Exception);
-        }
-    }
-
-    /// @brief List every loaded TMP font asset that directly contains each test glyph.
-    ///        This identifies the real loaded source font without relying on
-    ///        TMP_FontAssetUtilities overload signatures.
-    static void LogKoreanGlyphSourceFonts()
-    {
-        static bool s_HasRun = false;
-        if (s_HasRun)
-            return;
-        s_HasRun = true;
-
-        try
-        {
-            auto l_Fonts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_FontAsset*>();
-
-            const char16_t l_Chars[] = {
-                u'환', u'경', u'음', u'악', u'제', u'거',
-                u'룹', u'콤', u'밝', u'홍', u'죽'
-            };
-
-            Logger::Instance->Info(u"[KoreanGlyphSource] Scanning loaded TMP font assets per glyph...");
-
-            for (char16_t l_Char : l_Chars)
-            {
-                bool l_Found = false;
-
-                for (auto& l_Font : l_Fonts)
-                {
-                    if (!l_Font)
-                        continue;
-
-                    if (!l_Font->HasCharacter(l_Char, false, false))
-                        continue;
-
-                    l_Found = true;
-
-                    std::u16string l_Message = u"[KoreanGlyphSource] ";
-                    l_Message += l_Char;
-                    l_Message += u" -> ";
-                    l_Message += l_Font->get_name();
-                    Logger::Instance->Info(l_Message);
-                }
-
-                if (!l_Found)
-                {
-                    std::u16string l_Message = u"[KoreanGlyphSource] ";
-                    l_Message += l_Char;
-                    l_Message += u" -> <no loaded TMP font asset>";
-                    Logger::Instance->Info(l_Message);
-                }
-            }
-
-            Logger::Instance->Info(u"[KoreanGlyphSource] Scan complete.");
-        }
-        catch (const std::exception& l_Exception)
-        {
-            Logger::Instance->Error(u"[KoreanGlyphSource] Scan failed:");
-            Logger::Instance->Error(l_Exception);
-        }
-    }
-
-    static std::u16string ToU16Number(std::size_t p_Value)
-    {
-        const auto l_Value = std::to_string(p_Value);
-        return std::u16string(l_Value.begin(), l_Value.end());
-    }
-
-    /// @brief Inspect Quest / Android OS fonts without changing any TMP font asset.
-    static void LogQuestOSKoreanFonts()
-    {
-        static bool s_HasRun = false;
-        if (s_HasRun)
-            return;
-        s_HasRun = true;
-
-        try
-        {
-            Logger::Instance->Info(u"[OSFontDiag] ===== Quest OS font scan start =====");
-            auto l_Names = UnityEngine::Font::GetOSInstalledFontNames();
-
-            std::u16string l_Count = u"[OSFontDiag] Installed font names=";
-            l_Count += ToU16Number(static_cast<std::size_t>(l_Names.size()));
-            Logger::Instance->Info(l_Count);
-
-            int l_Candidates = 0;
-            for (auto l_Name : l_Names)
-            {
-                auto l_Font = UnityEngine::Font::CreateDynamicFontFromOSFont(l_Name, 48);
-                if (!l_Font)
-                    continue;
-
-                const bool l_Group = l_Font->HasCharacter(u'룹');
-                const bool l_Combo = l_Font->HasCharacter(u'콤');
-                const bool l_Bright = l_Font->HasCharacter(u'밝');
-                const bool l_Promo = l_Font->HasCharacter(u'홍');
-                const bool l_Firework = l_Font->HasCharacter(u'죽');
-
-                if (!(l_Group || l_Combo || l_Bright || l_Promo || l_Firework))
-                    continue;
-
-                std::u16string l_Message = u"[OSFontDiag] Font=";
-                l_Message += l_Name;
-                l_Message += u" | 룹=";
-                l_Message += l_Group ? u"1" : u"0";
-                l_Message += u" 콤=";
-                l_Message += l_Combo ? u"1" : u"0";
-                l_Message += u" 밝=";
-                l_Message += l_Bright ? u"1" : u"0";
-                l_Message += u" 홍=";
-                l_Message += l_Promo ? u"1" : u"0";
-                l_Message += u" 죽=";
-                l_Message += l_Firework ? u"1" : u"0";
-                Logger::Instance->Info(l_Message);
-
-                if (l_Group && l_Combo && l_Bright && l_Promo && l_Firework)
-                {
-                    ++l_Candidates;
-                    std::u16string l_Full = u"[OSFontDiag] FULL_CANDIDATE=";
-                    l_Full += l_Name;
-                    Logger::Instance->Info(l_Full);
-                }
-            }
-
-            std::u16string l_End = u"[OSFontDiag] Full candidates=";
-            l_End += ToU16Number(static_cast<std::size_t>(l_Candidates));
-            Logger::Instance->Info(l_End);
-            Logger::Instance->Info(u"[OSFontDiag] ===== Quest OS font scan end =====");
-        }
-        catch (const std::exception& l_Exception)
-        {
-            Logger::Instance->Error(u"[OSFontDiag] Scan failed:");
-            Logger::Instance->Error(l_Exception);
-        }
-    }
-
-    /// @brief Try to extend the already-loaded NotoSansKR TMP font at runtime
-    ///        by attaching Quest's Noto Sans CJK KR OS font as the source.
-    static void TryExtendLoadedKoreanFont()
+    /// @brief Enable on-demand Korean glyph generation for Beat Saber's Korean TMP font.
+    static void EnsureKoreanDynamicFont()
     {
         static bool s_HasRun = false;
         if (s_HasRun)
@@ -292,10 +33,7 @@ namespace QBeatSaberPlus_GameTweaker::UI {
 
             for (auto& l_Font : l_Fonts)
             {
-                if (!l_Font)
-                    continue;
-
-                if (l_Font->get_name() == u"NotoSansKR-Medium SDF")
+                if (l_Font && l_Font->get_name() == u"NotoSansKR-Medium SDF")
                 {
                     l_KoreanFont = l_Font;
                     break;
@@ -303,107 +41,25 @@ namespace QBeatSaberPlus_GameTweaker::UI {
             }
 
             if (!l_KoreanFont)
-            {
-                Logger::Instance->Info(u"[KoreanFontExtend] NotoSansKR-Medium SDF not found.");
                 return;
-            }
 
             auto l_SourceFont = l_KoreanFont->get_sourceFontFile();
-
-            std::u16string l_Info = u"[KoreanFontExtend] Found NotoSansKR-Medium SDF | sourceFont=";
-            l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
-            Logger::Instance->Info(l_Info);
-
-            std::u16string l_ModeInfo = u"[KoreanFontExtend] atlasPopulationMode(before)=";
-            l_ModeInfo += ToU16Number(static_cast<std::size_t>(static_cast<int>(l_KoreanFont->get_atlasPopulationMode())));
-            Logger::Instance->Info(l_ModeInfo);
-
-            const auto l_CharacterCountBefore = static_cast<std::size_t>(l_KoreanFont->get_characterTable()->get_Count());
-            const auto l_GlyphCountBefore = static_cast<std::size_t>(l_KoreanFont->get_glyphTable()->get_Count());
-
-            Logger::Instance->Info(u"[NotoDump] ===== Font Details =====");
-
-            std::u16string l_DumpInfo = u"[NotoDump] CharacterTable=";
-            l_DumpInfo += ToU16Number(l_CharacterCountBefore);
-            Logger::Instance->Info(l_DumpInfo);
-
-            l_DumpInfo = u"[NotoDump] GlyphTable=";
-            l_DumpInfo += ToU16Number(l_GlyphCountBefore);
-            Logger::Instance->Info(l_DumpInfo);
-
-            l_DumpInfo = u"[NotoDump] AtlasTextures=";
-            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_atlasTextures().size()));
-            Logger::Instance->Info(l_DumpInfo);
-
-            auto fb = l_KoreanFont->get_fallbackFontAssetTable();
-
-            l_DumpInfo = u"[NotoDump] FallbackFonts=";
-            l_DumpInfo += ToU16Number(static_cast<std::size_t>(fb ? fb->get_Count() : 0));
-            Logger::Instance->Info(l_DumpInfo);
-
-            Logger::Instance->Info(u"[NotoDump] ===== End =====");
-
             if (!l_SourceFont)
             {
-                Logger::Instance->Info(u"[KoreanFontExtend] Creating Quest OS source font: Noto Sans CJK KR");
-                l_SourceFont = UnityEngine::Font::CreateDynamicFontFromOSFont(u"Noto Sans CJK KR", 48);
-
+                l_SourceFont = UnityEngine::Font::New_ctor(u"/system/fonts/NotoSansCJK-Regular.ttc");
                 if (!l_SourceFont)
-                {
-                    Logger::Instance->Info(u"[KoreanFontExtend] Failed to create Noto Sans CJK KR OS font.");
                     return;
-                }
 
                 l_KoreanFont->set_sourceFontFile(l_SourceFont);
-
-                std::u16string l_Attached = u"[KoreanFontExtend] Attached source font=";
-                l_Attached += l_SourceFont->get_name();
-                Logger::Instance->Info(l_Attached);
             }
 
             l_KoreanFont->set_atlasPopulationMode(
                 TMPro::AtlasPopulationMode(TMPro::AtlasPopulationMode::Dynamic)
             );
-
-            l_ModeInfo = u"[KoreanFontExtend] atlasPopulationMode(after)=";
-            l_ModeInfo += ToU16Number(static_cast<std::size_t>(static_cast<int>(l_KoreanFont->get_atlasPopulationMode())));
-            Logger::Instance->Info(l_ModeInfo);
-
-            Logger::Instance->Info(u"[KoreanFontExtend] Trying to add: 룹 콤 밝 홍 죽");
-            const bool l_Result = l_KoreanFont->TryAddCharacters(u"룹콤밝홍죽", false);
-
-            Logger::Instance->Info(
-                l_Result
-                    ? u"[KoreanFontExtend] TryAddCharacters returned true."
-                    : u"[KoreanFontExtend] TryAddCharacters returned false."
-            );
-
-            l_DumpInfo = u"[KoreanFontExtend] CharacterTable before=";
-            l_DumpInfo += ToU16Number(l_CharacterCountBefore);
-            l_DumpInfo += u" after=";
-            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_characterTable()->get_Count()));
-            Logger::Instance->Info(l_DumpInfo);
-
-            l_DumpInfo = u"[KoreanFontExtend] GlyphTable before=";
-            l_DumpInfo += ToU16Number(l_GlyphCountBefore);
-            l_DumpInfo += u" after=";
-            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_glyphTable()->get_Count()));
-            Logger::Instance->Info(l_DumpInfo);
-
-            const char16_t l_Chars[] = { u'룹', u'콤', u'밝', u'홍', u'죽' };
-
-            for (char16_t l_Char : l_Chars)
-            {
-                std::u16string l_Message = u"[KoreanFontExtend] ";
-                l_Message += l_Char;
-                l_Message += u" | nowDirect=";
-                l_Message += l_KoreanFont->HasCharacter(l_Char, false, false) ? u"true" : u"false";
-                Logger::Instance->Info(l_Message);
-            }
         }
         catch (const std::exception& l_Exception)
         {
-            Logger::Instance->Error(u"[KoreanFontExtend] Failed:");
+            Logger::Instance->Error(u"Failed to enable Korean dynamic font:");
             Logger::Instance->Error(l_Exception);
         }
     }
@@ -436,34 +92,23 @@ namespace QBeatSaberPlus_GameTweaker::UI {
     /// @brief On view creation
     void SettingsMainView::OnViewCreation_Impl()
     {
-        /// Try to populate the existing Korean TMP font before the UI text is built.
-        TryExtendLoadedKoreanFont();
+        EnsureKoreanDynamicFont();
 
         Templates::FullRectLayoutMainView({
             Templates::TitleBar(u"게임 트위커 | 설정"),
 
             XUITabControl::Make({
                 {u"파티클",       BuildParticlesTab()},
-                {u"환경",     BuildEnvironmentTab()},
-                {u"곡 선택",  BuildLevelSelectionTab()},
-                {u"플레이어 설정",   BuildPlayerOptionsTab()},
-                {u"메인 메뉴",        BuildMainMenuTab()}
+                {u"환경",         BuildEnvironmentTab()},
+                {u"곡 선택",      BuildLevelSelectionTab()},
+                {u"플레이어 설정", BuildPlayerOptionsTab()},
+                {u"메인 메뉴",    BuildMainMenuTab()}
             })
             ->Bind(&m_TabControl)
             ->AsShared()
         })
         ->SetBackground(true, std::nullopt, true)
         ->BuildUI(get_transform());
-
-        /// Diagnostics only. These calls do not change the UI font.
-        LogQuestOSKoreanFonts();
-        LogKoreanFontCandidates();
-        LogKoreanGlyphResolution();
-        LogKoreanGlyphSourceFonts();
-
-        /// Diagnostic: do not call OnSettingChanged() during view creation.
-        /// This avoids re-applying patches while BS+/CP_SDK is attaching the new view.
-        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged during view creation");
     }
     /// @brief On view deactivation
     void SettingsMainView::OnViewDeactivation_Impl()
@@ -708,7 +353,6 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         m_MainMenuTab_LevelFailedColor  ->SetInteractable(l_MainMenuConfig->OverrideMenuEnvColors);
         #pragma endregion MainMenu_Tab
 
-        /// Update patches
         GameTweaker::Instance()->UpdatePatches(false);
     }
     /// @brief When settings are changed
@@ -780,10 +424,6 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         #pragma endregion MainMenu_Tab
 
         m_PreventChanges = false;
-
-        /// Diagnostic: do not call OnSettingChanged() immediately after refresh.
-        /// This prevents a second patch application during UI reactivation.
-        Logger::Instance->Info(u"[GameTweaker-UI-Diag] Skipped OnSettingChanged after RefreshSettings");
     }
 
 }   ///< namespace QBeatSaberPlus_GameTweaker::UI
