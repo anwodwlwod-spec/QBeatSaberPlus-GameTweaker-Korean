@@ -9,6 +9,7 @@
 
 #include <TMPro/TMP_FontAsset.hpp>
 #include <UnityEngine/Resources.hpp>
+#include <UnityEngine/Font.hpp>
 
 using namespace CP_SDK::Unity::Extensions;
 using namespace CP_SDK::XUI;
@@ -200,6 +201,102 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         }
     }
 
+    /// @brief Try to extend the already-loaded NotoSansKR TMP font at runtime
+    ///        with the Korean syllables that currently fall through to unicode sprites.
+    ///        No AssetBundle / CMake changes are required.
+    static void TryExtendLoadedKoreanFont()
+    {
+        static bool s_HasRun = false;
+        if (s_HasRun)
+            return;
+        s_HasRun = true;
+
+        try
+        {
+            auto l_Fonts = UnityEngine::Resources::FindObjectsOfTypeAll<TMPro::TMP_FontAsset*>();
+            TMPro::TMP_FontAsset* l_KoreanFont = nullptr;
+
+            for (auto& l_Font : l_Fonts)
+            {
+                if (!l_Font)
+                    continue;
+
+                if (l_Font->get_name() == u"NotoSansKR-Medium SDF")
+                {
+                    l_KoreanFont = l_Font;
+                    break;
+                }
+            }
+
+            if (!l_KoreanFont)
+            {
+                Logger::Instance->Info(u"[KoreanFontExtend] NotoSansKR-Medium SDF not found.");
+                return;
+            }
+
+            auto l_SourceFont = l_KoreanFont->get_sourceFontFile();
+            const auto l_Mode = l_KoreanFont->get_atlasPopulationMode();
+
+            std::u16string l_Info = u"[KoreanFontExtend] Found NotoSansKR-Medium SDF | mode=";
+            l_Info += std::to_string(static_cast<int>(l_Mode)).c_str();
+            l_Info += u" | sourceFont=";
+            l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
+            Logger::Instance->Info(l_Info);
+
+            Logger::Instance->Info(u"[NotoDump] ===== Font Details =====");
+
+            std::u16string info = u"[NotoDump] CharacterTable=";
+            info += std::to_string(l_KoreanFont->get_characterTable()->get_Count()).c_str();
+            Logger::Instance->Info(info);
+
+            info = u"[NotoDump] GlyphTable=";
+            info += std::to_string(l_KoreanFont->get_glyphTable()->get_Count()).c_str();
+            Logger::Instance->Info(info);
+
+            info = u"[NotoDump] AtlasTextures=";
+            info += std::to_string(l_KoreanFont->get_atlasTextures()->Length()).c_str();
+            Logger::Instance->Info(info);
+
+            info = u"[NotoDump] FallbackFonts=";
+            auto fb = l_KoreanFont->get_fallbackFontAssetTable();
+            info += std::to_string(fb ? fb->get_Count() : 0).c_str();
+            Logger::Instance->Info(info);
+
+            Logger::Instance->Info(u"[NotoDump] ===== End =====");
+
+            if (!l_SourceFont)
+            {
+                Logger::Instance->Info(u"[KoreanFontExtend] Source font is null; TryAddCharacters skipped.");
+                return;
+            }
+
+            Logger::Instance->Info(u"[KoreanFontExtend] Trying to add: 룹 콤 밝 홍 죽");
+            const bool l_Result = l_KoreanFont->TryAddCharacters(u"룹콤밝홍죽", false);
+
+            Logger::Instance->Info(
+                l_Result
+                    ? u"[KoreanFontExtend] TryAddCharacters returned true."
+                    : u"[KoreanFontExtend] TryAddCharacters returned false."
+            );
+
+            const char16_t l_Chars[] = { u'룹', u'콤', u'밝', u'홍', u'죽' };
+
+            for (char16_t l_Char : l_Chars)
+            {
+                std::u16string l_Message = u"[KoreanFontExtend] ";
+                l_Message += l_Char;
+                l_Message += u" | nowDirect=";
+                l_Message += l_KoreanFont->HasCharacter(l_Char, false, false) ? u"true" : u"false";
+                Logger::Instance->Info(l_Message);
+            }
+        }
+        catch (const std::exception& l_Exception)
+        {
+            Logger::Instance->Error(u"[KoreanFontExtend] Failed:");
+            Logger::Instance->Error(l_Exception);
+        }
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
@@ -228,6 +325,9 @@ namespace QBeatSaberPlus_GameTweaker::UI {
     /// @brief On view creation
     void SettingsMainView::OnViewCreation_Impl()
     {
+        /// Try to populate the existing Korean TMP font before the UI text is built.
+        TryExtendLoadedKoreanFont();
+
         Templates::FullRectLayoutMainView({
             Templates::TitleBar(u"게임 트위커 | 설정"),
 
