@@ -6,15 +6,16 @@
 #define AtlasPopulationMode_Unwrapped __AtlasPopulationMode_Unwrapped
 
 // Font-debug experiment:
-// Test #67 proved that UnityEngine::Font can be created successfully from
-// Quest's /system/fonts/NotoSansCJK-Regular.ttc, but TMP_FontAsset::CreateFontAsset
-// still throws because the generated wrapper selects the wrong overload.
+// Test #69 proved the working path:
+//   Quest file-backed Noto CJK Font -> existing NotoSansKR-Medium SDF source
+//   -> switch TMP asset to Dynamic -> missing Korean glyphs can be generated.
 //
-// For test #68, skip creation of a second TMP asset entirely. Feed the
-// file-backed Unity Font directly into the already loaded NotoSansKR-Medium SDF.
-// The existing TryExtendLoadedKoreanFont() code will then switch that asset to
-// Dynamic and call TryAddCharacters(), so success is simply 600 -> 606.
-//
+// Test #70 checks whether TMP can populate missing glyphs automatically when
+// they are first rendered. Keep the successful source replacement, but suppress
+// the explicit TryAddCharacters("룹콤밝홍죽") prefill by redirecting that call to
+// an empty string. If 룹/콤/밝/홍/죽/듈 all still render correctly, the final fix
+// only needs source attachment + Dynamic population mode.
+
 // This macro must remain syntactically valid after a member access (`obj->`).
 // Keep the original member call at the start of the replacement, then run the
 // diagnostic block afterward. The self-reference is intentionally not expanded
@@ -37,3 +38,7 @@
             Logger::Instance->Info(u"[KoreanDirectSource] Existing NotoSansKR source replaced with file-backed Font."); \
         } \
     } while (false)
+
+// Test #70 only: neutralize the explicit prefill call in SettingsMainView.cpp.
+// Function-like macro expansion after `obj->` remains a normal member call.
+#define TryAddCharacters(...) TryAddCharacters(u"", false)
