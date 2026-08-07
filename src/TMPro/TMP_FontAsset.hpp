@@ -24,6 +24,7 @@
             __gt_dynamic->set_name(u"GameTweaker-Korean-Dynamic"); \
             __gt_dynamic->set_atlasPopulationMode(::TMPro::AtlasPopulationMode(::TMPro::AtlasPopulationMode::Dynamic)); \
             __gt_dynamic->set_isMultiAtlasTexturesEnabled(true); \
+            __gt_dynamic->TryAddCharacters(u"룹콤밝홍죽", false); \
             auto* __gt_fallbacks = l_KoreanFont->get_fallbackFontAssetTable(); \
             if (__gt_fallbacks) \
                 __gt_fallbacks->Add(__gt_dynamic); \
