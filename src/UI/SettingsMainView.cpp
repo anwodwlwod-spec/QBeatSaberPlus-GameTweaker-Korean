@@ -8,6 +8,7 @@
 #include <CP_SDK/Unity/Extensions/ColorU.hpp>
 
 #include <TMPro/TMP_FontAsset.hpp>
+#include <TMPro/AtlasPopulationMode.hpp>
 #include <UnityEngine/Resources.hpp>
 #include <UnityEngine/Font.hpp>
 
@@ -313,14 +314,21 @@ namespace QBeatSaberPlus_GameTweaker::UI {
             l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
             Logger::Instance->Info(l_Info);
 
+            std::u16string l_ModeInfo = u"[KoreanFontExtend] atlasPopulationMode(before)=";
+            l_ModeInfo += ToU16Number(static_cast<std::size_t>(static_cast<int>(l_KoreanFont->get_atlasPopulationMode())));
+            Logger::Instance->Info(l_ModeInfo);
+
+            const auto l_CharacterCountBefore = static_cast<std::size_t>(l_KoreanFont->get_characterTable()->get_Count());
+            const auto l_GlyphCountBefore = static_cast<std::size_t>(l_KoreanFont->get_glyphTable()->get_Count());
+
             Logger::Instance->Info(u"[NotoDump] ===== Font Details =====");
 
             std::u16string l_DumpInfo = u"[NotoDump] CharacterTable=";
-            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_characterTable()->get_Count()));
+            l_DumpInfo += ToU16Number(l_CharacterCountBefore);
             Logger::Instance->Info(l_DumpInfo);
 
             l_DumpInfo = u"[NotoDump] GlyphTable=";
-            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_glyphTable()->get_Count()));
+            l_DumpInfo += ToU16Number(l_GlyphCountBefore);
             Logger::Instance->Info(l_DumpInfo);
 
             l_DumpInfo = u"[NotoDump] AtlasTextures=";
@@ -353,6 +361,14 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                 Logger::Instance->Info(l_Attached);
             }
 
+            l_KoreanFont->set_atlasPopulationMode(
+                TMPro::AtlasPopulationMode(TMPro::AtlasPopulationMode::Dynamic)
+            );
+
+            l_ModeInfo = u"[KoreanFontExtend] atlasPopulationMode(after)=";
+            l_ModeInfo += ToU16Number(static_cast<std::size_t>(static_cast<int>(l_KoreanFont->get_atlasPopulationMode())));
+            Logger::Instance->Info(l_ModeInfo);
+
             Logger::Instance->Info(u"[KoreanFontExtend] Trying to add: 룹 콤 밝 홍 죽");
             const bool l_Result = l_KoreanFont->TryAddCharacters(u"룹콤밝홍죽", false);
 
@@ -361,6 +377,18 @@ namespace QBeatSaberPlus_GameTweaker::UI {
                     ? u"[KoreanFontExtend] TryAddCharacters returned true."
                     : u"[KoreanFontExtend] TryAddCharacters returned false."
             );
+
+            l_DumpInfo = u"[KoreanFontExtend] CharacterTable before=";
+            l_DumpInfo += ToU16Number(l_CharacterCountBefore);
+            l_DumpInfo += u" after=";
+            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_characterTable()->get_Count()));
+            Logger::Instance->Info(l_DumpInfo);
+
+            l_DumpInfo = u"[KoreanFontExtend] GlyphTable before=";
+            l_DumpInfo += ToU16Number(l_GlyphCountBefore);
+            l_DumpInfo += u" after=";
+            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_glyphTable()->get_Count()));
+            Logger::Instance->Info(l_DumpInfo);
 
             const char16_t l_Chars[] = { u'룹', u'콤', u'밝', u'홍', u'죽' };
 
