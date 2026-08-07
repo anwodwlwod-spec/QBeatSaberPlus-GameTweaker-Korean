@@ -245,22 +245,22 @@ namespace QBeatSaberPlus_GameTweaker::UI {
 
             Logger::Instance->Info(u"[NotoDump] ===== Font Details =====");
 
-            std::u16string info = u"[NotoDump] CharacterTable=";
-            info += std::to_string(l_KoreanFont->get_characterTable()->get_Count()).c_str();
-            Logger::Instance->Info(info);
+            Logger::Instance->Info(std::string("[NotoDump] CharacterTable=" + std::to_string(l_KoreanFont->get_characterTable()->get_Count())).c_str());
 
-            info = u"[NotoDump] GlyphTable=";
-            info += std::to_string(l_KoreanFont->get_glyphTable()->get_Count()).c_str();
-            Logger::Instance->Info(info);
 
-            info = u"[NotoDump] AtlasTextures=";
-            info += std::to_string(l_KoreanFont->get_atlasTextures()->Length()).c_str();
-            Logger::Instance->Info(info);
 
-            info = u"[NotoDump] FallbackFonts=";
+            Logger::Instance->Info(std::string("[NotoDump] GlyphTable=" + std::to_string(l_KoreanFont->get_glyphTable()->get_Count())).c_str());
+
+
+
+            Logger::Instance->Info(std::string("[NotoDump] AtlasTextures=" + std::to_string(l_KoreanFont->get_atlasTextures()->Length())).c_str());
+
+
+
             auto fb = l_KoreanFont->get_fallbackFontAssetTable();
-            info += std::to_string(fb ? fb->get_Count() : 0).c_str();
-            Logger::Instance->Info(info);
+
+
+            Logger::Instance->Info(std::string("[NotoDump] FallbackFonts=" + std::to_string(fb ? fb->get_Count() : 0)).c_str());
 
             Logger::Instance->Info(u"[NotoDump] ===== End =====");
 
