@@ -18,15 +18,26 @@
 #define set_sourceFontFile(value) \
     set_sourceFontFile(value); \
     do { \
+        Logger::Instance->Info(u"[KoreanDynamicFallback] Creating fresh TMP font asset..."); \
         auto* __gt_source = static_cast<::UnityEngine::Font*>(value); \
         auto __gt_dynamic = ::TMPro::TMP_FontAsset::CreateFontAsset(__gt_source); \
         if (__gt_dynamic) { \
+            Logger::Instance->Info(u"[KoreanDynamicFallback] CreateFontAsset succeeded."); \
             __gt_dynamic->set_name(u"GameTweaker-Korean-Dynamic"); \
             __gt_dynamic->set_atlasPopulationMode(::TMPro::AtlasPopulationMode(::TMPro::AtlasPopulationMode::Dynamic)); \
             __gt_dynamic->set_isMultiAtlasTexturesEnabled(true); \
-            __gt_dynamic->TryAddCharacters(u"룹콤밝홍죽", false); \
+            const bool __gt_added = __gt_dynamic->TryAddCharacters(u"룹콤밝홍죽듈", false); \
+            Logger::Instance->Info(__gt_added \
+                ? u"[KoreanDynamicFallback] TryAddCharacters(룹콤밝홍죽듈)=true" \
+                : u"[KoreanDynamicFallback] TryAddCharacters(룹콤밝홍죽듈)=false"); \
             auto* __gt_fallbacks = l_KoreanFont->get_fallbackFontAssetTable(); \
-            if (__gt_fallbacks) \
+            if (__gt_fallbacks) { \
                 __gt_fallbacks->Add(__gt_dynamic); \
+                Logger::Instance->Info(u"[KoreanDynamicFallback] Added to NotoSansKR fallback table."); \
+            } else { \
+                Logger::Instance->Info(u"[KoreanDynamicFallback] NotoSansKR fallback table is null."); \
+            } \
+        } else { \
+            Logger::Instance->Info(u"[KoreanDynamicFallback] CreateFontAsset returned null."); \
         } \
     } while (false)
