@@ -201,6 +201,12 @@ namespace QBeatSaberPlus_GameTweaker::UI {
         }
     }
 
+    static std::u16string ToU16Number(std::size_t p_Value)
+    {
+        const auto l_Value = std::to_string(p_Value);
+        return std::u16string(l_Value.begin(), l_Value.end());
+    }
+
     /// @brief Try to extend the already-loaded NotoSansKR TMP font at runtime
     ///        with the Korean syllables that currently fall through to unicode sprites.
     ///        No AssetBundle / CMake changes are required.
@@ -238,29 +244,30 @@ namespace QBeatSaberPlus_GameTweaker::UI {
             const auto l_Mode = l_KoreanFont->get_atlasPopulationMode();
 
             std::u16string l_Info = u"[KoreanFontExtend] Found NotoSansKR-Medium SDF | mode=";
-            l_Info += std::to_string(static_cast<int>(l_Mode)).c_str();
+            l_Info += ToU16Number(static_cast<std::size_t>(l_Mode));
             l_Info += u" | sourceFont=";
             l_Info += l_SourceFont ? l_SourceFont->get_name() : u"<null>";
             Logger::Instance->Info(l_Info);
 
             Logger::Instance->Info(u"[NotoDump] ===== Font Details =====");
 
-            Logger::Instance->Info(std::string("[NotoDump] CharacterTable=" + std::to_string(l_KoreanFont->get_characterTable()->get_Count())).c_str());
+            std::u16string l_DumpInfo = u"[NotoDump] CharacterTable=";
+            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_characterTable()->get_Count()));
+            Logger::Instance->Info(l_DumpInfo);
 
+            l_DumpInfo = u"[NotoDump] GlyphTable=";
+            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_glyphTable()->get_Count()));
+            Logger::Instance->Info(l_DumpInfo);
 
-
-            Logger::Instance->Info(std::string("[NotoDump] GlyphTable=" + std::to_string(l_KoreanFont->get_glyphTable()->get_Count())).c_str());
-
-
-
-            Logger::Instance->Info(std::string("[NotoDump] AtlasTextures=" + std::to_string(l_KoreanFont->get_atlasTextures()->Length())).c_str());
-
-
+            l_DumpInfo = u"[NotoDump] AtlasTextures=";
+            l_DumpInfo += ToU16Number(static_cast<std::size_t>(l_KoreanFont->get_atlasTextures().size()));
+            Logger::Instance->Info(l_DumpInfo);
 
             auto fb = l_KoreanFont->get_fallbackFontAssetTable();
 
-
-            Logger::Instance->Info(std::string("[NotoDump] FallbackFonts=" + std::to_string(fb ? fb->get_Count() : 0)).c_str());
+            l_DumpInfo = u"[NotoDump] FallbackFonts=";
+            l_DumpInfo += ToU16Number(static_cast<std::size_t>(fb ? fb->get_Count() : 0));
+            Logger::Instance->Info(l_DumpInfo);
 
             Logger::Instance->Info(u"[NotoDump] ===== End =====");
 
