@@ -24,208 +24,89 @@ namespace QBeatSaberPlus_GameTweaker {
 
     CP_SDK_MODULE_BASE_INSTANCE_IMPL(GameTweaker);
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    /// Constructor
     GameTweaker::GameTweaker()
     {
-
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    /// @brief Enable the Module
     void GameTweaker::OnEnable()
     {
-        Logger::Instance->Info(u"[GT-FULL-DIAG] OnEnable START");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnSceneChange BEFORE");
-        CP_SDK_BS::Game::Logic::OnSceneChange += {this, &GameTweaker::Game_OnSceneChange};
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnSceneChange AFTER");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnLevelStarted BEFORE");
+        CP_SDK_BS::Game::Logic::OnSceneChange  += {this, &GameTweaker::Game_OnSceneChange};
         CP_SDK_BS::Game::Logic::OnLevelStarted += {this, &GameTweaker::Game_OnLevelStarted};
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Bind OnLevelStarted AFTER");
 
-        Logger::Instance->Info(u"[GT-FULL-DIAG] CustomMenuLightManager::Init BEFORE");
         Managers::CustomMenuLightManager::Init();
-        Logger::Instance->Info(u"[GT-FULL-DIAG] CustomMenuLightManager::Init AFTER");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(false) BEFORE");
         UpdatePatches(false);
-        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(false) AFTER");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] OnEnable END");
     }
-    /// @brief Disable the Module
+
     void GameTweaker::OnDisable()
     {
-        Logger::Instance->Info(u"[GT-FULL-DIAG] OnDisable START");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(true) BEFORE");
         UpdatePatches(true);
-        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches(true) AFTER");
 
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsLeftView BEFORE");
         CP_SDK::UI::UISystem::DestroyUI(&m_SettingsLeftView);
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsLeftView AFTER");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsMainView BEFORE");
         CP_SDK::UI::UISystem::DestroyUI(&m_SettingsMainView);
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Destroy SettingsMainView AFTER");
 
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnSceneChange BEFORE");
-        CP_SDK_BS::Game::Logic::OnSceneChange -= {this, &GameTweaker::Game_OnSceneChange};
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnSceneChange AFTER");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnLevelStarted BEFORE");
+        CP_SDK_BS::Game::Logic::OnSceneChange  -= {this, &GameTweaker::Game_OnSceneChange};
         CP_SDK_BS::Game::Logic::OnLevelStarted -= {this, &GameTweaker::Game_OnLevelStarted};
-        Logger::Instance->Info(u"[GT-FULL-DIAG] Unbind OnLevelStarted AFTER");
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] OnDisable END");
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    /// @brief Get Module settings UI
     GameTweaker::t_InitialViews GameTweaker::GetSettingsViewControllers()
     {
-        Logger::Instance->Info(u"[GT-FULL-DIAG] GetSettingsViewControllers START");
-
         if (!m_SettingsMainView)
-        {
-            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsMainView BEFORE");
             m_SettingsMainView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsMainView*>();
-            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsMainView AFTER");
-        }
-        else
-        {
-            Logger::Instance->Info(u"[GT-FULL-DIAG] Reuse SettingsMainView");
-        }
-
         if (!m_SettingsLeftView)
-        {
-            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsLeftView BEFORE");
             m_SettingsLeftView = CP_SDK::UI::UISystem::CreateViewController<UI::SettingsLeftView*>();
-            Logger::Instance->Info(u"[GT-FULL-DIAG] Create SettingsLeftView AFTER");
-        }
-        else
-        {
-            Logger::Instance->Info(u"[GT-FULL-DIAG] Reuse SettingsLeftView");
-        }
 
-        Logger::Instance->Info(u"[GT-FULL-DIAG] GetSettingsViewControllers END");
-        return { m_SettingsMainView.Ptr(), m_SettingsLeftView.Ptr(), nullptr};
+        return {m_SettingsMainView.Ptr(), m_SettingsLeftView.Ptr(), nullptr};
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    /// @brief Update patches
-    /// @param p_ForceDisable Force disable
     void GameTweaker::UpdatePatches(bool p_ForceDisable)
     {
-        Logger::Instance->Info(
-            p_ForceDisable
-                ? u"[GT-FULL-DIAG] UpdatePatches START DISABLE"
-                : u"[GT-FULL-DIAG] UpdatePatches START ENABLE"
-        );
+        try {
+            Patches::PNoteCutCoreEffectsSpawner::SetRemoveCutParticles(!p_ForceDisable && GTConfig::Instance()->RemoveAllCutParticles);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PNoteCutCoreEffectsSpawner"); Logger::Instance->Error(p_PatchException); }
 
-        #define GT_DIAG_PATCH(NAME, CALL) \
-            try { \
-                Logger::Instance->Info(u"[GT-FULL-DIAG] " NAME u" BEFORE"); \
-                CALL; \
-                Logger::Instance->Info(u"[GT-FULL-DIAG] " NAME u" AFTER"); \
-            } catch (const std::exception& p_PatchException) { \
-                Logger::Instance->Error(u"[GT-FULL-DIAG] " NAME u" EXCEPTION"); \
-                Logger::Instance->Error(p_PatchException); \
-            }
+        try {
+            Patches::PObstacleSaberSparkleEffectManager::SetRemoveObstacleParticles(!p_ForceDisable && GTConfig::Instance()->RemoveObstacleParticles);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PObstacleSaberSparkleEffectManager"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"PNoteCutCoreEffectsSpawner",
-            Patches::PNoteCutCoreEffectsSpawner::SetRemoveCutParticles(
-                !p_ForceDisable && GTConfig::Instance()->RemoveAllCutParticles
-            )
-        );
+        try {
+            Patches::PSaberBurnMarkSparkles::SetRemoveSaberBurnMarkSparkles(!p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarkSparkles);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PSaberBurnMarkSparkles"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"PObstacleSaberSparkleEffectManager",
-            Patches::PObstacleSaberSparkleEffectManager::SetRemoveObstacleParticles(
-                !p_ForceDisable && GTConfig::Instance()->RemoveObstacleParticles
-            )
-        );
+        try {
+            Patches::PSaberBurnMarkArea::SetRemoveSaberBurnMarks(!p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarks);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PSaberBurnMarkArea"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"PSaberBurnMarkSparkles",
-            Patches::PSaberBurnMarkSparkles::SetRemoveSaberBurnMarkSparkles(
-                !p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarkSparkles
-            )
-        );
+        try {
+            Patches::PSaberClashEffect::SetRemoveClashEffects(!p_ForceDisable && GTConfig::Instance()->RemoveSaberClashEffects);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PSaberClashEffect"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"PSaberBurnMarkArea",
-            Patches::PSaberBurnMarkArea::SetRemoveSaberBurnMarks(
-                !p_ForceDisable && GTConfig::Instance()->RemoveSaberBurnMarks
-            )
-        );
+        try {
+            UpdateWorldParticles(p_ForceDisable);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating UpdateWorldParticles"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"PSaberClashEffect",
-            Patches::PSaberClashEffect::SetRemoveClashEffects(
-                !p_ForceDisable && GTConfig::Instance()->RemoveSaberClashEffects
-            )
-        );
+        try {
+            Patches::PMainMenuViewController::SetRemovePackMusicPromoBanner(!p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PMainMenuViewController"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"UpdateWorldParticles",
-            UpdateWorldParticles(p_ForceDisable)
-        );
+        try {
+            Patches::PMusicPackPromoBanner::SetEnabled(!p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PPromoViewController"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"PMainMenuViewController",
-            Patches::PMainMenuViewController::SetRemovePackMusicPromoBanner(
-                !p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional
-            )
-        );
-
-        GT_DIAG_PATCH(
-            u"PMusicPackPromoBanner",
-            Patches::PMusicPackPromoBanner::SetEnabled(
-                !p_ForceDisable && GTConfig::Instance()->MainMenu->RemoveNewContentPromotional
-            )
-        );
-
-        GT_DIAG_PATCH(
-            u"PPlayerSettingsPanelController SetReorderEnabled",
+        try {
             Patches::PPlayerSettingsPanelController::SetReorderEnabled(
                 !p_ForceDisable && GTConfig::Instance()->PlayerOptions->ReorderPlayerSettings,
                 !p_ForceDisable && GTConfig::Instance()->PlayerOptions->OverrideLightIntensityOption
-            )
-        );
-
-        GT_DIAG_PATCH(
-            u"PPlayerSettingsPanelController SetLightsOptionMerging",
+            );
             Patches::PPlayerSettingsPanelController::SetLightsOptionMerging(
                 !p_ForceDisable && GTConfig::Instance()->PlayerOptions->MergeLightPressetOptions
-            )
-        );
+            );
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PlayerSettingsPanelController"); Logger::Instance->Error(p_PatchException); }
 
-        GT_DIAG_PATCH(
-            u"PLevelSearchViewController",
-            Patches::PLevelSearchViewController::SetRemoveBaseGameFilter(
-                !p_ForceDisable && GTConfig::Instance()->LevelSelection->RemoveBaseGameFilterButton
-            )
-        );
-
-        #undef GT_DIAG_PATCH
-
-        Logger::Instance->Info(u"[GT-FULL-DIAG] UpdatePatches END");
+        try {
+            Patches::PLevelSearchViewController::SetRemoveBaseGameFilter(!p_ForceDisable && GTConfig::Instance()->LevelSelection->RemoveBaseGameFilterButton);
+        } catch (const std::exception& p_PatchException) { Logger::Instance->Error(u"[GameTweaker] Error on updating PLevelSearchViewController"); Logger::Instance->Error(p_PatchException); }
     }
-    /// @brief Update world particles
-    /// @param p_ForceDisable Force disable
+
     void GameTweaker::UpdateWorldParticles(bool p_ForceDisable)
     {
         auto l_Objects = Resources::FindObjectsOfTypeAll<GameObject*>();
@@ -238,18 +119,12 @@ namespace QBeatSaberPlus_GameTweaker {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    /// @brief On game scene change
-    /// @param p_Scene New scene
     void GameTweaker::Game_OnSceneChange(CP_SDK_BS::Game::Logic::ESceneType p_Scene)
     {
         Patches::Lights::PLightsPatches::SetIsValidScene(p_Scene == CP_SDK_BS::Game::Logic::ESceneType::Playing);
         UpdateWorldParticles();
     }
-    /// @brief On level started
-    /// @param p_LevelData Level data
+
     void GameTweaker::Game_OnLevelStarted(const CP_SDK_BS::Game::LevelData::Ptr& p_LevelData)
     {
         Patches::Lights::PLightsPatches::SetFromConfig();
