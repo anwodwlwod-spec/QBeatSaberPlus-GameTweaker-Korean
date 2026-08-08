@@ -1,3 +1,15 @@
+# QBeatSaberPlus-GameTweaker Korean
+
+Unofficial Korean localization of HardCPP's QBeatSaberPlus-GameTweaker.
+
+Original project: https://github.com/hardcpp/QBeatSaberPlus-GameTweaker
+
+Korean localization/modifications by anwodwlwod-spec.
+
+This project retains the original MIT License. See `LICENSE` for details.
+
+---
+
 # #{name}
 
 #{description}
