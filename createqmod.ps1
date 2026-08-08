@@ -21,6 +21,13 @@ if ((-not ($cover -eq "./")) -and (Test-Path $cover))
     $fileList += ,$cover
 }
 
+# Preserve the original MIT license in distributed QMOD packages.
+$license = "./LICENSE"
+if (Test-Path $license)
+{
+    $fileList += ,$license
+}
+
 foreach ($mod in $modJson.modFiles) {
     $path = "./build/" + $mod
     if (-not (Test-Path $path)) {
