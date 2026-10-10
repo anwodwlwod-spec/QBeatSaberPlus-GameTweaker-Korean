@@ -6,8 +6,9 @@
 - 목표: Quest용 Beat Saber GameTweaker의 한국어 UI 제공, 안정성 확보, 일부 한글 음절 크기 불균형 해결
 - 대화 중 테스트 환경: Beat Saber 1.40.8_7379, GameTweaker 6.4.1, Meta Quest, MBF/Scotland2, GitHub Actions를 이용한 ARM64 .so 빌드
 
-## 완료: 한국어 UI
-- 여러 GameTweaker UI 문자열을 한국어로 번역.
+## 완료: 한국어 UI (기존 완역 작업 보존)
+- 이전 작업에서 GameTweaker UI 한국어 완역을 완료했다고 사용자가 확인함. 본 기록 추가는 번역 소스 변경이나 재번역을 수행하지 않았음.
+- 현재 저장소의 `src/UI/SettingsMainView.cpp`, `src/UI/SettingsLeftView.cpp`에서 한국어 문자열을 확인했으며, 전체 UI 문자열에 대한 전수 재검증까지 완료한 것은 아님.
 - 소스 변경 후 GitHub Actions로 `libqbeatsaberplus-gametweaker.so` 빌드하고 Quest에 적용.
 - 공식 원본 .so로 바꾸면 UI가 영어로 돌아가는 것도 확인하여 실행 중인 파일 교체 여부를 검증함.
 - 번역 적용 범위 전체와 최신 변경 상태는 현재 저장소의 소스가 기준이며, 이 문서는 변경 내역 전체를 대체하지 않음.
